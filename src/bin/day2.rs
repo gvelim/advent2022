@@ -33,11 +33,12 @@ fn main() {
     let (score1, score2) = std::fs::read_to_string("./src/bin/day2_input.txt")
         .unwrap()
         .lines()
-        .map(|round| (strategy_1(round), strategy_2(round)) )
-        .reduce(|mut acc, round| {
-            acc.0 += round.0;
-            acc.1 += round.1;
-            acc
+        .map(|round| (
+            strategy_1(round),
+            strategy_2(round))
+        )
+        .reduce(|sum, round| {
+            (sum.0 + round.0, sum.1 + round.1)
         })
         .unwrap_or_else(|| panic!("Empty iterator ?"));
     println!("Strategy 1 : {:?}",score1);
