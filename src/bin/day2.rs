@@ -1,72 +1,78 @@
-#[derive(Debug,Copy,Clone)]
-enum RPS { Rock=1, Paper, Scissor }
-enum Outcome { Win, Loss, Draw }
-impl From<RPS> for u64 {
-    fn from(rps: RPS) -> Self {
-        match rps {
-            RPS::Rock => 1,
-            RPS::Paper => 2,
-            RPS::Scissor => 3
-        }
-    }
-}
-impl From<u8> for RPS {
+use std::iter::once;
+
+#[derive(Debug,Copy,Clone,PartialEq)]
+enum Move { Rock=1, Paper, Scissors }
+impl From<u8> for Move {
     fn from(c: u8) -> Self {
         match c {
-            b'A' | b'X' => RPS::Rock,
-            b'B' | b'Y' => RPS::Paper,
-            b'C' | b'Z' => RPS::Scissor,
+            b'A' | b'X' => Move::Rock,
+            b'B' | b'Y' => Move::Paper,
+            b'C' | b'Z' => Move::Scissors,
             _ => unreachable!()
         }
     }
 }
-impl RPS {
-    fn read_positions(round:&str) -> (RPS,RPS) {
-        if let &[a,_,b] = round.as_bytes() { (RPS::from(a),RPS::from(b)) } else { unreachable!() }
-    }
-    fn derive_positions(round:&str) -> (RPS, RPS) {
-        let (a,outcome) = RPS::read_positions(round);
-        (a, match (a,outcome) {
-            (RPS::Rock, RPS::Rock) => RPS::Scissor,
-            (RPS::Paper, RPS::Rock) => RPS::Rock,
-            (RPS::Scissor, RPS::Rock) => RPS::Paper,
-            (RPS::Rock, RPS::Paper) => RPS::Rock,
-            (RPS::Paper, RPS::Paper) => RPS::Paper,
-            (RPS::Scissor, RPS::Paper) => RPS::Scissor,
-            (RPS::Rock, RPS::Scissor) => RPS::Paper,
-            (RPS::Paper, RPS::Scissor) => RPS::Scissor,
-            (RPS::Scissor, RPS::Scissor) => RPS::Rock,
-        }
+impl Move {
+    fn is_winning(&self, other:&Self) -> bool {
+        matches!(
+            (other,self),
+            (Move::Rock, Move::Paper) |
+            (Move::Paper, Move::Scissors) |
+            (Move::Scissors, Move::Rock)
         )
     }
-    fn strategy_1(round:&str) -> Outcome {
-        match RPS::read_positions(round) {
-            (RPS::Rock, RPS::Rock) |
-            (RPS::Paper, RPS::Paper) |
-            (RPS::Scissor, RPS::Scissor) => Outcome::Draw,
-            (RPS::Rock, RPS::Paper) |
-            (RPS::Paper, RPS::Scissor) |
-            (RPS::Scissor, RPS::Rock) =>Outcome::Win,
-            (RPS::Rock, RPS::Scissor) |
-            (RPS::Paper, RPS::Rock) |
-            (RPS::Scissor, RPS::Paper) => Outcome::Loss,
+    fn outcome(&self, other:&Self) -> Outcome {
+        if self.is_winning(other) {
+            Outcome::Win
+        } else if other.is_winning(self) {
+            Outcome::Loss
+        } else {
+            Outcome::Draw
         }
     }
-    fn strategy_2(round:&str) -> Outcome {
-        let (_,res) = RPS::read_positions(round);
-        match res {
-            RPS::Rock => Outcome::Loss,
-            RPS::Paper => Outcome::Draw,
-            RPS::Scissor => Outcome::Win,
+    fn derive(&self, out:Outcome) -> Move {
+        let iter = once(Move::Rock).chain(once(Move::Paper)).chain(once(Move::Scissors)).cycle();
+        // match out {
+        //     Outcome::Draw => iter.skip_while(|e| self != e).skip(0).next(),
+        //     Outcome::Win => iter.skip_while(|e| self != e).skip(1).next()
+        //     Outcome::Loss => iter.skip_while(|e| self != e).skip(2).next(),
+        // }.unwrap()
+        iter.skip_while(|e| self != e).skip(out as usize).next().unwrap()
+    }
+}
+#[derive(Debug,Copy,Clone)]
+enum Outcome { Draw, Win, Loss }
+impl From<Move> for Outcome {
+    fn from(m: Move) -> Self {
+        match m {
+            Move::Rock => Outcome::Loss,
+            Move::Paper => Outcome::Draw,
+            Move::Scissors => Outcome::Win
         }
     }
-    fn score(round:&str, positions:fn(&str)->(RPS, RPS), strategy:fn(&str)->Outcome) -> u64 {
-        let (_,b) = positions(round);
-        match strategy(round) {
-            Outcome::Win => b as u64 + 6,
-            Outcome::Loss => b as u64 + 0,
-            Outcome::Draw => b as u64 + 3
+}
+impl Outcome {
+    fn score_value(&self) -> u64 {
+        match self {
+            Outcome::Loss => 0,
+            Outcome::Draw => 3,
+            Outcome::Win => 6
         }
+    }
+}
+#[derive(Debug,Copy,Clone)]
+struct Round(Move,Move);
+impl Round {
+    fn new(round:&str) -> Round {
+        if let &[a,_,b] = round.as_bytes() { Round(Move::from(a), Move::from(b)) } else { unreachable!() }
+    }
+    fn derived(round:&str) -> Round {
+        let Round(a,b) = Round::new(round);
+        Round(a, a.derive(Outcome::from(b)))
+    }
+    fn score(&self) -> u64 {
+        let Round(other, me) = self;
+        me.outcome(other).score_value() + *me as u64
     }
 }
 
@@ -75,8 +81,8 @@ fn main() {
         .unwrap()
         .lines()
         .map(|round| (
-            RPS::score(round, RPS::read_positions, RPS::strategy_1),
-            RPS::score(round, RPS::derive_positions, RPS::strategy_2)
+            Round::new(round).score(),
+            Round::derived(round).score()
         ))
         .reduce(|sum, round| {
             (sum.0 + round.0, sum.1 + round.1)

@@ -15,7 +15,7 @@ fn main() {
     let count = lines.lines().count() / 3;
 }
 
-fn component_1(lines: &String) -> u32 {
+fn component_1(lines: &str) -> u32 {
     lines.lines()
         .map(|line| line.split_at( line.len()>>1 ) )
         .map(|(compa, compb)| {
