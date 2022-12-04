@@ -1,5 +1,3 @@
-extern crate core;
-
 use std::collections::HashSet;
 
 fn main() {
@@ -9,12 +7,18 @@ fn main() {
     // wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn\n\
     // ttgJtRGJQctTZtZT\n\
     // CrZsJsPPZsGzwwsLwLmpwMDw";
-    let file = std::fs::read_to_string("./src/bin/day3.txt").unwrap_or_else(|e| panic!("{e}"));
 
-    let out = file.lines()
+    let lines = std::fs::read_to_string("./src/bin/day3.txt").unwrap_or_else(|e| panic!("{e}"));
+
+    println!("{:?}",component_1(&lines));
+
+    let count = lines.lines().count() / 3;
+}
+
+fn component_1(lines: &String) -> u32 {
+    lines.lines()
         .map(|line| line.split_at( line.len()>>1 ) )
         .map(|(compa, compb)| {
-            println!("{compa},{compb}");
             compa.chars().filter(|&c| compb.find(c).is_some() ).collect::<HashSet<_>>()
         })
         .map(|set|
@@ -30,6 +34,5 @@ fn main() {
         )
         .fold(0,|sum, v|
             sum + v.iter().sum::<u32>()
-        );
-    println!("{:?}",out);
+        )
 }
