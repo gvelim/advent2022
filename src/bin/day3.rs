@@ -11,8 +11,6 @@ fn main() {
     let lines = std::fs::read_to_string("./src/bin/day3.txt").unwrap_or_else(|e| panic!("{e}"));
 
     println!("{:?}",component_1(&lines));
-
-    let count = lines.lines().count() / 3;
 }
 
 fn component_1(lines: &str) -> u32 {
@@ -30,9 +28,8 @@ fn component_1(lines: &str) -> u32 {
                         _ => panic!("use only alphabetic characters")
                     }
                 )
-                .collect::<Vec<u32>>()
+                .sum::<u32>()
         )
-        .fold(0,|sum, v|
-            sum + v.iter().sum::<u32>()
-        )
+        .reduce(|sum, v| sum + v )
+        .unwrap_or_else(|| unreachable!())
 }
