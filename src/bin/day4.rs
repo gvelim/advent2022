@@ -1,5 +1,20 @@
-use std::collections::HashSet;
+use std::ops::RangeInclusive;
 use std::str::FromStr;
+
+trait InclusiveRangeExt {
+    fn is_subset(&self, other: &Self) -> bool;
+    fn is_overlapping(&self, other: &Self) -> bool;
+}
+
+impl<T> InclusiveRangeExt for RangeInclusive<T>
+    where T : PartialOrd {
+    fn is_subset(&self, other: &Self) -> bool {
+        self.contains(other.start()) && self.contains(other.end())
+    }
+    fn is_overlapping(&self, other: &Self) -> bool {
+        self.contains(other.start()) || self.contains(other.end())
+    }
+}
 
 fn main() {
 
@@ -9,28 +24,24 @@ fn main() {
             line.split(|c:char| c.is_ascii_punctuation())
                 .map(|c| u32::from_str(c).unwrap_or_else(|e| panic!("{e}")) )
                 .collect::<Vec<_>>()
-        ).map(|pair| {
+        )
+        .map(|pair| {
             let [a, b, c, d] = pair[..] else { panic!("") };
-            (
-                (a..=b).collect::<HashSet<_>>(),
-                (c..=d).collect::<HashSet<_>>()
-            )
+            ((a..=b), (c..=d))
         })
         .collect::<Vec<_>>();
 
     let out = pairs.iter()
         .filter(|(a,b)|
-            match  a.len() < b.len() {
-                true => a.is_subset(&b),
-                false => b.is_subset(&a)
-            }
+            a.is_subset(b) || b.is_subset(a)
         )
         .count();
     println!("Component 1 = {out}");
 
-    let len = pairs.len();
-    let out = len - pairs.iter()
-        .filter(|(a,b)| a.is_disjoint(&b) )
+    let out = pairs.iter()
+        .filter(|(a,b)|
+            a.is_overlapping(b) || b.is_overlapping(a)
+        )
         .count();
     println!("Component 2 = {out}");
 }

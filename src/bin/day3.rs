@@ -19,7 +19,7 @@ fn component_2(lines:&str) -> u32 {
         .collect::<Vec<_>>()
         .chunks(3)
         .map(|group| {
-            group.into_iter()
+            group.iter()
                 .map(|a| a.chars().collect::<HashSet<_>>())
                 .reduce(|a, b|
                     a.intersection(&b).copied().collect::<HashSet<_>>()
