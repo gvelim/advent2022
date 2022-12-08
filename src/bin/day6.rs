@@ -3,20 +3,18 @@ use std::fmt::Debug;
 trait Duplicate {
     fn has_duplicates(&self) -> bool;
 }
-impl<T> Duplicate for [T] where T: Debug + PartialEq {
+impl<T> Duplicate for [T] where T: Debug + Copy + PartialEq + Ord {
     fn has_duplicates(&self) -> bool {
-        let len = self.len();
-        !self.iter()
-            .take(len-1)
-            .enumerate()
-            .all(|(i,e)| !self[i+1..].contains(e))
+        let mut tmp = self.to_vec();
+        tmp.sort();
+        tmp.windows(2).any(|a| a[0]==a[1])
     }
 }
 
 trait Signaling {
     fn marker_position(&self, len:usize) -> usize;
 }
-impl<T> Signaling for [T] where T : Debug + PartialEq {
+impl<T> Signaling for [T] where T : Debug + Copy + PartialEq + Ord {
     fn marker_position(&self, len: usize) -> usize {
         self.windows(len)
             .enumerate()
@@ -26,7 +24,6 @@ impl<T> Signaling for [T] where T : Debug + PartialEq {
             .unwrap()
     }
 }
-
 
 fn main() {
     let data = std::fs::read_to_string("src/bin/day6_input.txt").expect("");
