@@ -21,7 +21,7 @@ impl<T> Signaling for [T] where T : Debug + Copy + PartialEq + Ord {
             .skip_while(|&(_,stm)| stm.has_duplicates() )
             .next()
             .map(|(i,_)| i + len)
-            .unwrap()
+            .unwrap_or_else(|| panic!("marker_position(): Ops!"))
     }
 }
 
