@@ -1,3 +1,4 @@
+use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::str::FromStr;
 
@@ -25,7 +26,8 @@ struct Node {
 }
 #[derive(Debug)]
 struct Tree {
-    map: HashMap<String,Node>
+    map: HashMap<String,Node>,
+    totals: RefCell<Vec<(String,usize)>>
 }
 impl Tree {
     fn children(&self, dir: &String) -> Vec<&String> {
@@ -43,6 +45,9 @@ impl Tree {
     }
     fn dir_size(&self, dir: &String) -> usize {
         self.map[dir].size
+    }
+    fn totals(&self) -> Vec<(String,usize)> {
+        self.totals.take()
     }
     fn parse_history(history: &Vec<LineType>) -> Tree {
         use LineType::*;
@@ -69,7 +74,7 @@ impl Tree {
                     Cmd(CommandType::List) => {},
                 }
             });
-        Tree { map }
+        Tree { map, totals: RefCell::new(Vec::new()) }
     }
     fn calc_dirs_totals(&self, dir: &String) -> usize {
         let mut sum = self.dir_size(dir);
@@ -77,6 +82,7 @@ impl Tree {
             sum += self.calc_dirs_totals(d);
         }
         println!("{:?}:{:?}",dir, sum);
+        self.totals.borrow_mut().push((dir.clone(),sum));
         sum
     }
 }
@@ -107,6 +113,8 @@ $ ls
 5626152 d.ext
 7214296 k";
 
+    // let history = std::fs::read_to_string("src/bin/day7_input.txt").expect("");
+
     let out = history.lines()
         .filter_map(|e| {
             let p:Vec<_> = e.split(" ").collect();
@@ -120,11 +128,10 @@ $ ls
                 _ => Some(LineType::Rst(ResultType::File(p[1].to_string(), usize::from_str(p[0]).unwrap())))
                 }
         })
-        // .inspect(|e| println!("{:?}",e))
+        .inspect(|e| println!("{:?}",e))
         .collect::<Vec<_>>();
 
     let tree = Tree::parse_history(&out);
-    println!("{:?}", tree);
-    println!("{:?}", tree.calc_dirs_totals(&"/".to_string()));
-
+    tree.calc_dirs_totals(&"/".to_string());
+    println!("{:?}", tree.totals);
 }
