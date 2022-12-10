@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::str::FromStr;
+
 #[derive(Debug, Clone)]
 enum ResultType {
     File(String, usize),
@@ -19,13 +20,30 @@ enum LineType {
 struct Node {
     parent: String,
     content: Vec<ResultType>,
-    size: usize
+    size: usize,
+    total: usize
 }
 #[derive(Debug)]
 struct Tree {
     map: HashMap<String,Node>
 }
 impl Tree {
+    fn children(&self, dir: &String) -> Vec<&String> {
+        self.map[dir]
+            .content
+            .iter()
+            .filter_map(|rt|
+                if let ResultType::Dir(dir) = rt {
+                    Some(dir)
+                } else {
+                    None
+                }
+            )
+            .collect()
+    }
+    fn dir_size(&self, dir: &String) -> usize {
+        self.map[dir].size
+    }
     fn parse_history(history: &Vec<LineType>) -> Tree {
         use LineType::*;
 
@@ -33,12 +51,12 @@ impl Tree {
         let mut dir: String = "/".to_string();
 
         history.iter()
-            .inspect(|line| println!("{:?}",line))
+            // .inspect(|line| println!("{:?}",line))
             .for_each(|lt| {
                 match lt {
                     Cmd(CommandType::Cd(d)) if d.contains("..") => dir = map[&dir].parent.clone(),
                     Cmd(CommandType::Cd(d)) => {
-                            map.entry(d.clone()).or_insert(Node { parent: dir.clone(), content: Vec::new(), size: 0 });
+                            map.entry(d.clone()).or_insert(Node { parent: dir.clone(), content: Vec::new(), size: 0, total: 0 });
                             dir = d.clone();
                         }
                     Rst(res) => {
@@ -52,6 +70,14 @@ impl Tree {
                 }
             });
         Tree { map }
+    }
+    fn calc_dirs_totals(&self, dir: &String) -> usize {
+        let mut sum = self.dir_size(dir);
+        for d in self.children(dir) {
+            sum += self.calc_dirs_totals(d);
+        }
+        println!("{:?}:{:?}",dir, sum);
+        sum
     }
 }
 
@@ -97,6 +123,8 @@ $ ls
         // .inspect(|e| println!("{:?}",e))
         .collect::<Vec<_>>();
 
-    println!("{:?}", Tree::parse_history(&out));
+    let tree = Tree::parse_history(&out);
+    println!("{:?}", tree);
+    println!("{:?}", tree.calc_dirs_totals(&"/".to_string()));
 
 }
