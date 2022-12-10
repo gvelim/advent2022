@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::str::FromStr;
 
@@ -21,8 +21,7 @@ enum LineType {
 struct Node {
     parent: String,
     content: Vec<ResultType>,
-    size: usize,
-    total: usize
+    size: usize
 }
 #[derive(Debug)]
 struct Tree {
@@ -53,7 +52,7 @@ impl Tree {
         use LineType::*;
 
         let mut map = HashMap::<String,Node>::new();
-        let mut dir: String = "/".to_string();
+        let mut dir: String = "".to_string();
 
         history.iter()
             // .inspect(|line| println!("{:?}",line))
@@ -61,9 +60,12 @@ impl Tree {
                 match lt {
                     Cmd(CommandType::Cd(d)) if d.contains("..") => dir = map[&dir].parent.clone(),
                     Cmd(CommandType::Cd(d)) => {
-                            map.entry(d.clone()).or_insert(Node { parent: dir.clone(), content: Vec::new(), size: 0, total: 0 });
-                            dir = d.clone();
-                        }
+                        let id = format!("{}{}",dir,d);
+                        println!("{id}");
+                        map.entry(id.clone())
+                            .or_insert(Node { parent: dir.clone(), content: Vec::new(), size: 0 });
+                        dir = id;
+                    }
                     Rst(res) => {
                         let node = map.get_mut(&dir).unwrap();
                         node.content.push(res.clone());
@@ -79,7 +81,8 @@ impl Tree {
     fn calc_dirs_totals(&self, dir: &String) -> usize {
         let mut sum = self.dir_size(dir);
         for d in self.children(dir) {
-            sum += self.calc_dirs_totals(d);
+            let key = format!("{}{}",dir,d);
+            sum += self.calc_dirs_totals(&key);
         }
         println!("{:?}:{:?}",dir, sum);
         self.totals.borrow_mut().push((dir.clone(),sum));
@@ -132,6 +135,7 @@ $ ls
         .collect::<Vec<_>>();
 
     let tree = Tree::parse_history(&out);
+    println!("{:?}",tree);
     tree.calc_dirs_totals(&"/".to_string());
-    println!("{:?}", tree.totals);
+    println!("{:?}", tree.totals());
 }
