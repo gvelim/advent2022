@@ -1,4 +1,3 @@
-use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -121,7 +120,8 @@ fn main() {
     let tree = Tree::parse_history(&hst_lines);
 
     tree.calc_dirs_totals(&"/".to_string());
-    let dirs = tree.totals.take();
+    let dirs = tree.totals();
+
     println!("Directories < 100000 \n====================");
     println!("{:?}",
              dirs.iter()
