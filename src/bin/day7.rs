@@ -1,3 +1,4 @@
+use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -120,13 +121,25 @@ fn main() {
     let tree = Tree::parse_history(&hst_lines);
 
     tree.calc_dirs_totals(&"/".to_string());
-
+    let dirs = tree.totals.take();
     println!("Directories < 100000 \n====================");
     println!("{:?}",
-             tree.totals()
-                 .iter()
+             dirs.iter()
                  .filter(|(_,size)| *size < 100000 )
                  .inspect(|&p| println!("{:?}",p))
                  .map(|&(_,size)| size)
-                 .sum::<usize>());
+                 .sum::<usize>()
+    );
+
+    let total_space = 70000000;
+    let min_free_space = 30000000;
+    let &(_,total_used) = dirs.last().unwrap();
+    let min_space_to_free = min_free_space - (total_space - total_used);
+    println!("Directories ~ 30000000 \n====================");
+    println!("{:?}",
+             dirs.iter()
+                 .filter(|(_,size)| *size >= min_space_to_free )
+                 .inspect(|&p| println!("{:?}",p))
+                 .min_by(|&a,&b| a.1.cmp(&b.1))
+    );
 }
