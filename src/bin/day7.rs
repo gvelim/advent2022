@@ -17,19 +17,29 @@ enum LineType {
     Cmd(CommandType),
     Rst(ResultType)
 }
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+struct Path(String);
+impl Path {
+    fn new(path:String) -> Path {
+        Path(path)
+    }
+    fn append(&self, dir: &String) -> Path {
+        Path(format!("{}{}",self.0,dir))
+    }
+}
 #[derive(Debug)]
 struct Node {
-    parent: String,
+    parent: Path,
     content: Vec<ResultType>,
     size: usize
 }
 #[derive(Debug)]
 struct Tree {
-    map: HashMap<String,Node>,
-    totals: RefCell<Vec<(String,usize)>>
+    map: HashMap<Path,Node>,
+    totals: RefCell<Vec<(Path,usize)>>
 }
 impl Tree {
-    fn children(&self, path: &String) -> Vec<&String> {
+    fn children(&self, path: &Path) -> Vec<&String> {
         self.map[path]
             .content
             .iter()
@@ -42,17 +52,17 @@ impl Tree {
             )
             .collect()
     }
-    fn dir_size(&self, path: &String) -> usize {
+    fn dir_size(&self, path: &Path) -> usize {
         self.map[path].size
     }
-    fn totals(&self) -> Vec<(String,usize)> {
+    fn totals(&self) -> Vec<(Path, usize)> {
         self.totals.take()
     }
     fn parse_history(history: &Vec<LineType>) -> Tree {
         use LineType::*;
 
-        let mut map = HashMap::<String,Node>::new();
-        let mut path: String = "".to_string();
+        let mut map = HashMap::<Path,Node>::new();
+        let mut path = Path::new("".to_string());
 
         history.iter()
             // .inspect(|line| println!("{:?}",line))
@@ -60,8 +70,8 @@ impl Tree {
                 match lt {
                     Cmd(CommandType::Cd(dir)) if dir.contains("..") => path = map[&path].parent.clone(),
                     Cmd(CommandType::Cd(dir)) => {
-                        let cpath = format!("{}{}", path, dir);
-                        // println!("{cpath}");
+                        let cpath = path.append(dir);
+                        println!("{:?}",cpath);
                         map.entry(cpath.clone())
                             .or_insert(Node { parent: path.clone(), content: Vec::new(), size: 0 });
                         path = cpath;
@@ -78,10 +88,10 @@ impl Tree {
             });
         Tree { map, totals: RefCell::new(Vec::new()) }
     }
-    fn calc_dirs_totals(&self, path: &String) -> usize {
+    fn calc_dirs_totals(&self, path: &Path) -> usize {
         let mut sum = self.dir_size(path);
         for dir in self.children(path) {
-            let cpath = format!("{}{}", path, dir);
+            let cpath = path.append(dir);
             sum += self.calc_dirs_totals(&cpath);
         }
         // println!("{:?}:{:?}", path, sum);
@@ -119,7 +129,7 @@ fn main() {
 
     let tree = Tree::parse_history(&hst_lines);
 
-    tree.calc_dirs_totals(&"/".to_string());
+    tree.calc_dirs_totals(&Path::new("/".to_string()));
     let dirs = tree.totals();
 
     println!("Directories < 100000 \n====================");
