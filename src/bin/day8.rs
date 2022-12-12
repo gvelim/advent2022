@@ -1,3 +1,4 @@
+
 type ScanSequence = Vec<Vec<Coord>>;
 
 #[derive(Debug,Copy, Clone)]
@@ -25,11 +26,20 @@ impl<T> Grid<T> where T : Default + Copy {
             grid: vec![T::default(); width * height]
         }
     }
-    fn tree(&self, p: Coord) -> &T {
-        &self.grid[p.y * self.width + p.x]
+    fn in_bounds(&self, p:Coord) -> bool {
+        p.x < self.width && p.y < self.height
     }
-    fn tree_mut(&mut self, p: Coord) -> &mut T {
-        &mut self.grid[p.y * self.width + p.x]
+    fn tree(&self, p: Coord) -> Option<&T> {
+        if !self.in_bounds(p) {
+            return None
+        }
+        Some(&self.grid[p.y * self.width + p.x])
+    }
+    fn tree_mut(&mut self, p: Coord) -> Option<&mut T> {
+        if !self.in_bounds(p) {
+            return None
+        }
+        Some(&mut self.grid[p.y * self.width + p.x])
     }
 }
 
@@ -57,17 +67,54 @@ impl Visibility<'_> {
             .for_each(|pos| {
                 let mut tallest = -1;
                 pos.into_iter().for_each(|e| {
-                    let tree = self.visible.tree_mut(e);
-                    let t= self.forest.tree(e);
+                    let tree = self.visible.tree_mut(e).unwrap();
+                    let t= self.forest.tree(e).unwrap();
                     if tallest.lt(t) {
                         tallest = *t;
                         *tree = *tree || true;
-                    } else {
-                        *tree = *tree || false;
                     }
                 });
             });
         self
+    }
+}
+#[derive(Debug)]
+struct Scenic<'a> {
+    forest: &'a Grid<i32>,
+    scenic: Grid<usize>
+}
+impl Scenic<'_> {
+    fn new(forest: &Grid<i32>) -> Scenic {
+        Scenic {
+            forest,
+            scenic: Grid::new(forest.width, forest.height)
+        }
+    }
+    fn scenic_score_dir(&mut self, p:Coord, (dx,dy):(isize,isize)) -> usize {
+        let line = (1..).into_iter().map_while(|i| {
+            let coord = Coord {
+                x: p.x.checked_add_signed(dx * i)?,
+                y: p.y.checked_add_signed(dy * i)?,
+            };
+            self.forest.tree(coord)
+        });
+
+        let mut total = 0;
+        let our_height = self.forest.tree(p).unwrap();
+        for height in line {
+            total += 1;
+            if height >= our_height {
+                break;
+            }
+        }
+        total
+
+    }
+    fn scenic_score(&mut self, p: Coord) -> usize {
+        let dirs =  [(-1, 0), (1, 0), (0, -1), (0, 1)];
+        dirs.into_iter()
+            .map(|dir| self.scenic_score_dir(p,dir) )
+            .product()
     }
 }
 
@@ -84,6 +131,16 @@ fn main() {
         .scan_visibility(bottom_to_up(&grid))
         .count_visible();
     println!("Total Visible = {:?}", count);
+
+    let mut scenic = Scenic::new(&grid);
+    let max = left_to_right(&grid).into_iter()
+        .flat_map(|x| {
+            x.into_iter()
+                .map(|y| y)
+        })
+        .map(|p| scenic.scenic_score(p))
+        .max().unwrap();
+    println!("Max scenic = {:?}", max);
 }
 
 fn parse_forest(data: &str) -> Grid<i32>  {
@@ -93,7 +150,7 @@ fn parse_forest(data: &str) -> Grid<i32>  {
 
     for (y,line) in data.lines().enumerate() {
         for (x, val) in line.bytes().enumerate() {
-            *grid.tree_mut((x,y).into()) = (val - b'0') as i32;
+            *grid.tree_mut((x,y).into()).unwrap() = (val - b'0') as i32;
         }
     }
     grid
