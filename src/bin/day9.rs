@@ -23,10 +23,6 @@ impl Coord {
     fn new(x:isize,y:isize) -> Coord {
         Coord {x,y}
     }
-    fn distance(&self, other:Self) -> isize {
-        isize::abs(self.y - other.y)
-            .max(isize::abs(self.x - other.x) )
-    }
 }
 #[derive(Debug, Copy, Clone)]
 enum Command {
@@ -43,31 +39,25 @@ struct Step {
 
 #[derive(Debug, Copy, Clone)]
 struct Link {
-    cpos: Coord,
-    // lpos: Coord,
+    pos: Coord,
     dist: isize,
 }
 impl Link {
     fn new(pos:Coord, dist: isize) -> Link {
-        Link {
-            cpos: pos,
-            // lpos: pos,
-            dist
-        }
+        Link { pos: pos, dist }
     }
     fn move_to(&mut self, cmd: Command) -> Coord {
         // self.lpos = self.cpos;
         match cmd {
-            Command::Left => self.cpos.x -= 1,
-            Command::Right => self.cpos.x += 1,
-            Command::Up => self.cpos.y += 1,
-            Command::Down => self.cpos.y -= 1
+            Command::Left => self.pos.x -= 1,
+            Command::Right => self.pos.x += 1,
+            Command::Up => self.pos.y += 1,
+            Command::Down => self.pos.y -= 1
         }
-        println!("{:?}",self);
-        self.cur_position()
+        self.position()
     }
     fn move_relative(&mut self, front: &Link) -> Coord {
-        let dist = front.cur_position() - self.cur_position();
+        let dist = front.position() - self.position();
         let (dx,dy) = match (dist.x, dist.y) {
             // overlapping
             (0, 0) => (0, 0),
@@ -98,17 +88,12 @@ impl Link {
             (2, 2) => (1, 1),
             _ => panic!("unhandled case: tail - head = {dist:?}"),
         };
-        print!("{:?}, ",(dx,dy));
-        // self.lpos = self.cpos;
-        self.cpos.x += dx;
-        self.cpos.y += dy;
-        self.cur_position()
+        self.pos.x += dx;
+        self.pos.y += dy;
+        self.position()
     }
-    fn cur_position(&self) -> Coord {
-        self.cpos
-    }
-    fn last_position(&self) -> Coord {
-        self.cpos
+    fn position(&self) -> Coord {
+        self.pos
     }
 }
 
@@ -138,15 +123,12 @@ impl Rope {
 
         for i in 1..self.links.len() {
             let front = self.links[i-1].clone();
-            print!("{i} - ");
             self.links[i].move_relative(&front);
-            println!();
         }
-        println!();
         self.last_link_pos()
     }
     fn last_link_pos(&self) -> Coord {
-        self.links.last().unwrap().cur_position()
+        self.links.last().unwrap().position()
     }
 }
 
