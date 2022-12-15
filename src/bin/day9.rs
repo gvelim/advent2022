@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::hash::Hash;
+use std::ops::Sub;
 use std::str::FromStr;
 use std::vec;
 
@@ -7,6 +8,16 @@ use std::vec;
 struct Coord {
     x: isize,
     y: isize
+}
+impl Sub for Coord {
+    type Output = Coord;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Coord {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
+    }
 }
 impl Coord {
     fn new(x:isize,y:isize) -> Coord {
@@ -33,41 +44,71 @@ struct Step {
 #[derive(Debug, Copy, Clone)]
 struct Link {
     cpos: Coord,
-    lpos: Coord,
+    // lpos: Coord,
     dist: isize,
 }
 impl Link {
     fn new(pos:Coord, dist: isize) -> Link {
         Link {
-            cpos: pos, lpos: pos, dist
+            cpos: pos,
+            // lpos: pos,
+            dist
         }
     }
     fn move_to(&mut self, cmd: Command) -> Coord {
-        self.lpos = self.cpos;
+        // self.lpos = self.cpos;
         match cmd {
             Command::Left => self.cpos.x -= 1,
             Command::Right => self.cpos.x += 1,
-            Command::Up => self.cpos.y -= 1,
-            Command::Down => self.cpos.y += 1
+            Command::Up => self.cpos.y += 1,
+            Command::Down => self.cpos.y -= 1
         }
+        println!("{:?}",self);
         self.cur_position()
     }
     fn move_relative(&mut self, front: &Link) -> Coord {
-        let h = front.cur_position();
-        let t = self.cur_position();
-        if t.distance(h) > self.dist {
-            print!("D:{} - ",t.distance(h));
-            self.lpos = self.cpos;
-            self.cpos = front.last_position()
-        }
-        print!("{:?}",self);
+        let dist = front.cur_position() - self.cur_position();
+        let (dx,dy) = match (dist.x, dist.y) {
+            // overlapping
+            (0, 0) => (0, 0),
+            // touching up/left/down/right
+            (0, 1) | (1, 0) | (0, -1) | (-1, 0) => (0, 0),
+            // touching diagonally
+            (1, 1) | (1, -1) | (-1, 1) | (-1, -1) => (0, 0),
+            // need to move up/left/down/right
+            (0, 2) => (0, 1),
+            (0, -2) => (0, -1),
+            (2, 0) => (1, 0),
+            (-2, 0) => (-1, 0),
+            // need to move to the right diagonally
+            (2, 1) => (1, 1),
+            (2, -1) => (1, -1),
+            // need to move to the left diagonally
+            (-2, 1) => (-1, 1),
+            (-2, -1) => (-1, -1),
+            // need to move up/down diagonally
+            (1, 2) => (1, 1),
+            (-1, 2) => (-1, 1),
+            (1, -2) => (1, -1),
+            (-1, -2) => (-1, -1),
+            // need to move diagonally
+            (-2, -2) => (-1, -1),
+            (-2, 2) => (-1, 1),
+            (2, -2) => (1, -1),
+            (2, 2) => (1, 1),
+            _ => panic!("unhandled case: tail - head = {dist:?}"),
+        };
+        print!("{:?}, ",(dx,dy));
+        // self.lpos = self.cpos;
+        self.cpos.x += dx;
+        self.cpos.y += dy;
         self.cur_position()
     }
     fn cur_position(&self) -> Coord {
         self.cpos
     }
     fn last_position(&self) -> Coord {
-        self.lpos
+        self.cpos
     }
 }
 
@@ -97,8 +138,11 @@ impl Rope {
 
         for i in 1..self.links.len() {
             let front = self.links[i-1].clone();
+            print!("{i} - ");
             self.links[i].move_relative(&front);
+            println!();
         }
+        println!();
         self.last_link_pos()
     }
     fn last_link_pos(&self) -> Coord {
@@ -120,8 +164,8 @@ impl Game {
         let mut rope = Rope::new();
         for step in input {
             (0..step.units).all(|_| {
-                let pos = rope.move_to(step.cmd);
-                self.unique.insert(pos);
+                rope.move_to(step.cmd);
+                self.unique.insert(rope.last_link_pos());
                 true
             });
         }
@@ -151,9 +195,9 @@ fn parse_commands(input: &str) -> Vec<Step> {
 
 fn main() {
     // let data = "R 4\nU 4\nL 3\nD 1\nR 4\nD 1\nL 5\nR 2".to_string();
-    let data = "R 5\nU 8\nL 8\nD 3\nR 17\nD 10\nL 25\nU 20\n".to_string();
+    // let data = "R 5\nU 8\nL 8\nD 3\nR 17\nD 10\nL 25\nU 20\n".to_string();
 
-    // let data = std::fs::read_to_string("src/bin/day9_input.txt").expect("");
+    let data = std::fs::read_to_string("src/bin/day9_input.txt").expect("");
 
     let cmds = parse_commands(data.as_str());
 
