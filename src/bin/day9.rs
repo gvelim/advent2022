@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 #[derive(Debug, Copy, Clone)]
 struct Coord {
     x: isize,
@@ -40,10 +43,50 @@ impl Movable for Head {
             Command::Up => self.cpos.y -= 1,
             Command::Down => self.cpos.y += 1
         }
+        print!("H{:?}-",self.cpos);
         self.position()
     }
     fn position(&self) -> Coord {
         self.cpos
+    }
+}
+struct Tail {
+    pos: Coord,
+    head: Rc<RefCell<Head>>,
+    dist: isize
+}
+impl Movable for Tail {
+    fn move_to(&mut self, _: Command) -> Coord {
+        self.pos = self.head.borrow().lpos;
+        print!("T{:?}",self.pos);
+        self.position()
+    }
+
+    fn position(&self) -> Coord {
+        self.pos
+    }
+}
+struct Rope {
+    head: Rc<RefCell<Head>>,
+    tail: Box<Tail>
+}
+impl Rope {
+    fn new(p: Coord) -> Rope {
+        let head = Rc::new( RefCell::new( Head { cpos:p, lpos:p } ));
+        let tail = Box::new( Tail { pos: p, head: head.clone(), dist: 1 } );
+
+        Rope { tail, head }
+    }
+}
+impl Movable for Rope {
+    fn move_to(&mut self, s: Command) -> Coord {
+        let pos = self.head.borrow_mut().move_to(s);
+        self.tail.move_to(s);
+        pos
+    }
+
+    fn position(&self) -> Coord {
+        self.head.borrow().lpos
     }
 }
 
@@ -55,7 +98,7 @@ impl Game {
     fn new() -> Game {
         Game {
             sprites: vec![
-                Box::new(Head::new(Coord{x:0,y:0})),
+                Box::new(Rope::new(Coord{x:0,y:0})),
             ]
         }
     }
@@ -66,7 +109,7 @@ impl Game {
                     .iter_mut()
                     .all(|s| {
                         s.move_to(step.cmd);
-                        println!("{:?}",s.position());
+                        println!();
                         true
                     });
                 true
