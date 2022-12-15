@@ -1,8 +1,7 @@
-use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::hash::Hash;
-use std::rc::Rc;
 use std::str::FromStr;
+use std::vec;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct Coord {
@@ -10,6 +9,9 @@ struct Coord {
     y: isize
 }
 impl Coord {
+    fn new(x:isize,y:isize) -> Coord {
+        Coord {x,y}
+    }
     fn distance(&self, other:Self) -> isize {
         isize::abs(self.y - other.y)
             .max(isize::abs(self.x - other.x) )
@@ -28,22 +30,18 @@ struct Step {
     units: isize
 }
 
-trait Movable {
-    fn move_to(&mut self, s: Command) -> Coord;
-    fn position(&self) -> Coord;
-}
-
-#[derive(Debug)]
-struct Head {
+#[derive(Debug, Copy, Clone)]
+struct Link {
     cpos: Coord,
-    lpos: Coord
+    lpos: Coord,
+    dist: isize,
 }
-impl Head {
-    fn new(pos:Coord) -> Head {
-        Head { cpos: pos, lpos: pos }
+impl Link {
+    fn new(pos:Coord, dist: isize) -> Link {
+        Link {
+            cpos: pos, lpos: pos, dist
+        }
     }
-}
-impl Movable for Head {
     fn move_to(&mut self, cmd: Command) -> Coord {
         self.lpos = self.cpos;
         match cmd {
@@ -52,79 +50,78 @@ impl Movable for Head {
             Command::Up => self.cpos.y -= 1,
             Command::Down => self.cpos.y += 1
         }
-        self.position()
+        self.cur_position()
     }
-    fn position(&self) -> Coord {
+    fn move_relative(&mut self, front: &Link) -> Coord {
+        let h = front.cur_position();
+        let t = self.cur_position();
+        if t.distance(h) > self.dist {
+            print!("D:{} - ",t.distance(h));
+            self.lpos = self.cpos;
+            self.cpos = front.last_position()
+        }
+        print!("{:?}",self);
+        self.cur_position()
+    }
+    fn cur_position(&self) -> Coord {
         self.cpos
     }
-}
-struct Tail {
-    pos: Coord,
-    head: Rc<RefCell<Head>>,
-    dist: isize
-}
-impl Movable for Tail {
-    fn move_to(&mut self, _: Command) -> Coord {
-        let head = self.head.borrow().cpos;
-        let tail = self.pos;
-        if tail.distance(head) > self.dist {
-            self.pos = self.head.borrow().lpos;
-        }
-        self.position()
-    }
-    fn position(&self) -> Coord {
-        self.pos
+    fn last_position(&self) -> Coord {
+        self.lpos
     }
 }
+
 struct Rope {
-    head: Rc<RefCell<Head>>,
-    tail: Box<Tail>
+    links: Vec<Link>
 }
 impl Rope {
-    fn new(p: Coord) -> Rope {
-        let head = Rc::new( RefCell::new( Head::new(p) ));
-        let tail = Box::new( Tail { pos: p, head: head.clone(), dist: 1 } );
+    fn new() -> Rope {
+        Rope {
+            links: vec![
+                Link::new(Coord::new(0,0),1),
+                Link::new(Coord::new(0,0),1),
+                Link::new(Coord::new(0,0),1),
+                Link::new(Coord::new(0,0),1),
+                Link::new(Coord::new(0,0),1),
+                Link::new(Coord::new(0,0),1),
+                Link::new(Coord::new(0,0),1),
+                Link::new(Coord::new(0,0),1),
+                Link::new(Coord::new(0,0),1),
+                Link::new(Coord::new(0,0),1)
+            ]
+        }
+    }
+    fn move_to(&mut self, cmd: Command) -> Coord {
 
-        Rope { tail, head }
+        self.links[0].move_to(cmd);
+
+        for i in 1..self.links.len() {
+            let front = self.links[i-1].clone();
+            self.links[i].move_relative(&front);
+        }
+        self.last_link_pos()
     }
-}
-impl Movable for Rope {
-    fn move_to(&mut self, s: Command) -> Coord {
-        let pos = self.head.borrow_mut().move_to(s);
-        self.tail.move_to(s)
-    }
-    fn position(&self) -> Coord {
-        self.head.borrow().lpos
+    fn last_link_pos(&self) -> Coord {
+        self.links.last().unwrap().cur_position()
     }
 }
 
 struct Game {
-    sprites: Vec<Box<dyn Movable>>,
     unique: HashSet<Coord>
 }
 impl Game {
     fn new() -> Game {
-        Game {
-            sprites: vec![
-                Box::new(Rope::new(Coord{x:0,y:0})),
-            ],
-            unique: HashSet::new()
-        }
+        Game { unique: HashSet::new() }
     }
     fn unique_positions(&self) -> usize {
         self.unique.len()
     }
     fn run(&mut self, input: Vec<Step>) -> &Self{
+        let mut rope = Rope::new();
         for step in input {
             (0..step.units).all(|_| {
-                self.sprites
-                    .iter_mut()
-                    .all(|s| {
-                        self.unique.insert(
-                            s.move_to(step.cmd)
-                        );
-                        true
-                    });
+                let pos = rope.move_to(step.cmd);
+                self.unique.insert(pos);
                 true
             });
         }
@@ -135,18 +132,15 @@ impl Game {
 fn parse_commands(input: &str) -> Vec<Step> {
     input.lines()
         .map(|line| line.split(" ").into_iter())
-        .map(|mut s|
-                 (s.next().unwrap(), s.next().unwrap())
-        )
-        .map(|(cmd, unit)| {
-            let cmd = match cmd {
-                "R" => Command::Right,
-                "U" => Command::Up,
-                "D" => Command::Down,
-                "L" => Command::Left,
+        .map(|mut s| {
+            let cmd = match s.next() {
+                Some("R") => Command::Right,
+                Some("U") => Command::Up,
+                Some("D") => Command::Down,
+                Some("L") => Command::Left,
                 _ => panic!("Woohaaaa!")
             };
-            (cmd, isize::from_str(unit).unwrap())
+            (cmd, isize::from_str(s.next().unwrap()).unwrap())
         })
         .fold(vec![], |mut out, (cmd, units)| {
             out.push( Step{ cmd, units });
@@ -156,9 +150,10 @@ fn parse_commands(input: &str) -> Vec<Step> {
 }
 
 fn main() {
-    // let mut data = "R 4\nU 4\nL 3\nD 1\nR 4\nD 1\nL 5\nR 2";
+    // let data = "R 4\nU 4\nL 3\nD 1\nR 4\nD 1\nL 5\nR 2".to_string();
+    let data = "R 5\nU 8\nL 8\nD 3\nR 17\nD 10\nL 25\nU 20\n".to_string();
 
-    let data = std::fs::read_to_string("src/bin/day9_input.txt").expect("");
+    // let data = std::fs::read_to_string("src/bin/day9_input.txt").expect("");
 
     let cmds = parse_commands(data.as_str());
 
