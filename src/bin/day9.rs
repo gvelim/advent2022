@@ -1,10 +1,19 @@
 use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 use std::rc::Rc;
+use std::str::FromStr;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct Coord {
     x: isize,
     y: isize
+}
+impl Coord {
+    fn distance(&self, other:Self) -> isize {
+        isize::abs(self.y - other.y)
+            .max(isize::abs(self.x - other.x) )
+    }
 }
 #[derive(Debug, Copy, Clone)]
 enum Command {
@@ -43,7 +52,6 @@ impl Movable for Head {
             Command::Up => self.cpos.y -= 1,
             Command::Down => self.cpos.y += 1
         }
-        print!("H{:?}-",self.cpos);
         self.position()
     }
     fn position(&self) -> Coord {
@@ -59,14 +67,11 @@ impl Movable for Tail {
     fn move_to(&mut self, _: Command) -> Coord {
         let head = self.head.borrow().cpos;
         let tail = self.pos;
-        if isize::abs(tail.y - head.y) > self.dist ||
-            isize::abs(tail.x - head.x) > self.dist {
+        if tail.distance(head) > self.dist {
             self.pos = self.head.borrow().lpos;
-            print!("T{:?}",self.pos);
         }
         self.position()
     }
-
     fn position(&self) -> Coord {
         self.pos
     }
@@ -86,54 +91,81 @@ impl Rope {
 impl Movable for Rope {
     fn move_to(&mut self, s: Command) -> Coord {
         let pos = self.head.borrow_mut().move_to(s);
-        self.tail.move_to(s);
-        pos
+        self.tail.move_to(s)
     }
-
     fn position(&self) -> Coord {
         self.head.borrow().lpos
     }
 }
 
-
 struct Game {
-    sprites: Vec<Box<dyn Movable>>
+    sprites: Vec<Box<dyn Movable>>,
+    unique: HashSet<Coord>
 }
 impl Game {
     fn new() -> Game {
         Game {
             sprites: vec![
                 Box::new(Rope::new(Coord{x:0,y:0})),
-            ]
+            ],
+            unique: HashSet::new()
         }
     }
-    fn run(&mut self, input: Vec<Step>) {
+    fn unique_positions(&self) -> usize {
+        self.unique.len()
+    }
+    fn run(&mut self, input: Vec<Step>) -> &Self{
         for step in input {
             (0..step.units).all(|_| {
                 self.sprites
                     .iter_mut()
                     .all(|s| {
-                        s.move_to(step.cmd);
-                        println!();
+                        self.unique.insert(
+                            s.move_to(step.cmd)
+                        );
                         true
                     });
                 true
             });
         }
+        self
     }
 }
-fn main() {
-    // let input = "R 4\nU 4\nL 3\nD 1\nR 4\nD 1\nL 5\nR 2";
-    let input = vec![
-        Step { cmd: Command::Right, units: 4},
-        Step { cmd: Command::Up, units: 4},
-        Step { cmd: Command::Left, units: 3},
-        Step { cmd: Command::Down, units: 1},
-        Step { cmd: Command::Right, units: 4},
-        Step { cmd: Command::Down, units: 1},
-        Step { cmd: Command::Left, units: 5},
-        Step { cmd: Command::Right, units: 2}
-    ];
 
-    Game::new().run( input );
+fn parse_commands(input: &str) -> Vec<Step> {
+    input.lines()
+        .map(|line| line.split(" ").into_iter())
+        .map(|mut s|
+                 (s.next().unwrap(), s.next().unwrap())
+        )
+        .map(|(cmd, unit)| {
+            let cmd = match cmd {
+                "R" => Command::Right,
+                "U" => Command::Up,
+                "D" => Command::Down,
+                "L" => Command::Left,
+                _ => panic!("Woohaaaa!")
+            };
+            (cmd, isize::from_str(unit).unwrap())
+        })
+        .fold(vec![], |mut out, (cmd, units)| {
+            out.push( Step{ cmd, units });
+            out
+        })
+
+}
+
+fn main() {
+    // let mut data = "R 4\nU 4\nL 3\nD 1\nR 4\nD 1\nL 5\nR 2";
+
+    let data = std::fs::read_to_string("src/bin/day9_input.txt").expect("");
+
+    let cmds = parse_commands(data.as_str());
+
+    println!("Unique points: {}",
+             Game::new()
+                 .run( cmds )
+                 .unique_positions()
+    );
+
 }
