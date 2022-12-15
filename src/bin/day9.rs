@@ -39,15 +39,13 @@ struct Step {
 
 #[derive(Debug, Copy, Clone)]
 struct Link {
-    pos: Coord,
-    dist: isize,
+    pos: Coord
 }
 impl Link {
-    fn new(pos:Coord, dist: isize) -> Link {
-        Link { pos: pos, dist }
+    fn new(pos:Coord) -> Link {
+        Link { pos }
     }
     fn move_to(&mut self, cmd: Command) -> Coord {
-        // self.lpos = self.cpos;
         match cmd {
             Command::Left => self.pos.x -= 1,
             Command::Right => self.pos.x += 1,
@@ -103,28 +101,18 @@ struct Rope {
 impl Rope {
     fn new() -> Rope {
         Rope {
-            links: vec![
-                Link::new(Coord::new(0,0),1),
-                Link::new(Coord::new(0,0),1),
-                Link::new(Coord::new(0,0),1),
-                Link::new(Coord::new(0,0),1),
-                Link::new(Coord::new(0,0),1),
-                Link::new(Coord::new(0,0),1),
-                Link::new(Coord::new(0,0),1),
-                Link::new(Coord::new(0,0),1),
-                Link::new(Coord::new(0,0),1),
-                Link::new(Coord::new(0,0),1)
-            ]
+            links: vec![Link::new(Coord::new(0,0)); 10]
         }
     }
     fn move_to(&mut self, cmd: Command) -> Coord {
 
         self.links[0].move_to(cmd);
-
-        for i in 1..self.links.len() {
-            let front = self.links[i-1].clone();
-            self.links[i].move_relative(&front);
-        }
+        self.links
+            .iter_mut()
+            .reduce(|front,tail|{
+                tail.move_relative(front);
+                tail
+            });
         self.last_link_pos()
     }
     fn last_link_pos(&self) -> Coord {
@@ -157,7 +145,7 @@ impl Game {
 
 fn parse_commands(input: &str) -> Vec<Step> {
     input.lines()
-        .map(|line| line.split(" ").into_iter())
+        .map(|line| line.split(' ').into_iter())
         .map(|mut s| {
             let cmd = match s.next() {
                 Some("R") => Command::Right,
@@ -176,8 +164,8 @@ fn parse_commands(input: &str) -> Vec<Step> {
 }
 
 fn main() {
-    // let data = "R 4\nU 4\nL 3\nD 1\nR 4\nD 1\nL 5\nR 2".to_string();
-    // let data = "R 5\nU 8\nL 8\nD 3\nR 17\nD 10\nL 25\nU 20\n".to_string();
+//     let data = "R 4\nU 4\nL 3\nD 1\nR 4\nD 1\nL 5\nR 2".to_string();
+//     let data = "R 5\nU 8\nL 8\nD 3\nR 17\nD 10\nL 25\nU 20\n".to_string();
 
     let data = std::fs::read_to_string("src/bin/day9_input.txt").expect("");
 
