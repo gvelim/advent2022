@@ -57,8 +57,13 @@ struct Tail {
 }
 impl Movable for Tail {
     fn move_to(&mut self, _: Command) -> Coord {
-        self.pos = self.head.borrow().lpos;
-        print!("T{:?}",self.pos);
+        let head = self.head.borrow().cpos;
+        let tail = self.pos;
+        if isize::abs(tail.y - head.y) > self.dist ||
+            isize::abs(tail.x - head.x) > self.dist {
+            self.pos = self.head.borrow().lpos;
+            print!("T{:?}",self.pos);
+        }
         self.position()
     }
 
@@ -72,7 +77,7 @@ struct Rope {
 }
 impl Rope {
     fn new(p: Coord) -> Rope {
-        let head = Rc::new( RefCell::new( Head { cpos:p, lpos:p } ));
+        let head = Rc::new( RefCell::new( Head::new(p) ));
         let tail = Box::new( Tail { pos: p, head: head.clone(), dist: 1 } );
 
         Rope { tail, head }
@@ -102,7 +107,7 @@ impl Game {
             ]
         }
     }
-    fn run(&mut self, mut input: Vec<Step>) {
+    fn run(&mut self, input: Vec<Step>) {
         for step in input {
             (0..step.units).all(|_| {
                 self.sprites
@@ -120,14 +125,14 @@ impl Game {
 fn main() {
     // let input = "R 4\nU 4\nL 3\nD 1\nR 4\nD 1\nL 5\nR 2";
     let input = vec![
-        Step { cmd: Command::Left, units: 1},
-        Step { cmd: Command::Right, units: 3},
-        Step { cmd: Command::Up, units: 2},
-        Step { cmd: Command::Down, units: 5},
-        Step { cmd: Command::Left, units: 1},
-        Step { cmd: Command::Right, units: 3},
-        Step { cmd: Command::Up, units: 2},
-        Step { cmd: Command::Down, units: 5}
+        Step { cmd: Command::Right, units: 4},
+        Step { cmd: Command::Up, units: 4},
+        Step { cmd: Command::Left, units: 3},
+        Step { cmd: Command::Down, units: 1},
+        Step { cmd: Command::Right, units: 4},
+        Step { cmd: Command::Down, units: 1},
+        Step { cmd: Command::Left, units: 5},
+        Step { cmd: Command::Right, units: 2}
     ];
 
     Game::new().run( input );
