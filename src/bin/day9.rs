@@ -112,8 +112,9 @@ impl Rope {
             .reduce(|front,tail|{
                 tail.move_relative(front);
                 tail
-            });
-        self.last_link_pos()
+            })
+            .unwrap()
+            .position()
     }
     fn last_link_pos(&self) -> Coord {
         self.links.last().unwrap().position()
