@@ -19,9 +19,9 @@ impl Sub for Coord {
         }
     }
 }
-impl Coord {
-    fn new(x:isize,y:isize) -> Coord {
-        Coord {x,y}
+impl From<(isize,isize)> for Coord {
+    fn from(pos: (isize, isize)) -> Self {
+        Coord{x:pos.0, y:pos.1}
     }
 }
 #[derive(Debug, Copy, Clone)]
@@ -95,13 +95,13 @@ impl Link {
     }
 }
 
-struct Rope {
+struct Chain {
     links: Vec<Link>
 }
-impl Rope {
-    fn new() -> Rope {
-        Rope {
-            links: vec![Link::new(Coord::new(0,0)); 10]
+impl Chain {
+    fn new(pos:Coord, size:usize) -> Chain {
+        Chain {
+            links: vec![Link::new(pos); size]
         }
     }
     fn move_to(&mut self, cmd: Command) -> Coord {
@@ -116,27 +116,25 @@ impl Rope {
             .unwrap()
             .position()
     }
-    fn last_link_pos(&self) -> Coord {
-        self.links.last().unwrap().position()
-    }
 }
 
 struct Game {
+    rope: Chain,
     unique: HashSet<Coord>
 }
 impl Game {
-    fn new() -> Game {
-        Game { unique: HashSet::new() }
+    fn new(rope: Chain) -> Game {
+        Game { rope, unique: HashSet::new() }
     }
     fn unique_positions(&self) -> usize {
         self.unique.len()
     }
-    fn run(&mut self, input: Vec<Step>) -> &Self{
-        let mut rope = Rope::new();
+    fn run(&mut self, input: &Vec<Step>) -> &Self{
         for step in input {
             (0..step.units).all(|_| {
-                rope.move_to(step.cmd);
-                self.unique.insert(rope.last_link_pos());
+                self.unique.insert(
+                    self.rope.move_to( step.cmd )
+                );
                 true
             });
         }
@@ -172,10 +170,14 @@ fn main() {
 
     let cmds = parse_commands(data.as_str());
 
-    println!("Unique points: {}",
-             Game::new()
-                 .run( cmds )
+    println!("2 Link Chain - Unique points: {}",
+             Game::new( Chain::new((0, 0).into(), 2))
+                 .run( &cmds )
                  .unique_positions()
     );
-
+    println!("10 Links Chain - Unique points: {}",
+             Game::new( Chain::new((0, 0).into(), 10))
+                 .run( &cmds )
+                 .unique_positions()
+    );
 }
