@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 type Cycles = usize;
+
 #[derive(Debug,Copy, Clone)]
 enum InstructionSet { Noop, AddX(isize) }
 
@@ -17,33 +18,34 @@ impl Instruction {
         }
     }
 }
+
 #[derive(Debug)]
 struct Register(isize);
 
 #[derive(Debug)]
 struct CPU {
     x: Register,
-    ir: Option<Instruction>,
-    count: Cycles
+    buffer: Option<Instruction>,
+    exec_cycle: Cycles
 }
 impl CPU {
     fn new() -> CPU {
-        CPU { x: Register(1), ir: None, count: 0 }
+        CPU { x: Register(1), buffer: None, exec_cycle: 0 }
     }
     fn fetch(&mut self, op: Instruction) {
-        self.count = 0;
-        self.ir = Some(op);
+        self.exec_cycle = 0;
+        self.buffer = Some(op);
     }
     fn execute(&mut self) -> bool {
-        match self.ir {                         // Check instruction buffer
+        match self.buffer {                         // Check instruction buffer
             None => false,                          // empty, not exec, go and load
             Some(op) => {                 // Instruction loaded
-                self.count += 1;                // execution cycle #
-                if op.ticks == self.count {     // exec cycles reached ?
-                    self.x.0 += op.result();        // move Val to Reg X
-                    self.ir = None;                 // flush instruction buffer
+                self.exec_cycle += 1;               // execution cycle #
+                if op.ticks == self.exec_cycle {    // exec cycles reached ?
+                    self.x.0 += op.result();            // move Val to Reg X
+                    self.buffer = None;                 // flush instruction buffer
                     false                           // not exec, go and load
-                } else { true }                 // Busy executing
+                } else { true }                     // Busy executing
             }
         }
     }
