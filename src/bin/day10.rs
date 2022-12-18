@@ -1,3 +1,4 @@
+use std::fs::symlink_metadata;
 use std::str::FromStr;
 
 type Cycles = usize;
@@ -21,7 +22,7 @@ struct CPU {
 }
 impl CPU {
     fn new() -> CPU {
-        CPU { x: Register(0), ir: None, count: 0 }
+        CPU { x: Register(1), ir: None, count: 0 }
     }
     fn fetch(&mut self, op: Instruction) {
         self.count = 0;
@@ -68,19 +69,31 @@ fn main() {
     let input = std::fs::read_to_string("src/bin/day10_input.txt").expect("Ops!");
     // let sw = parse_instructions("noop\naddx 3\naddx -5" );
     let sw = parse_instructions(input.as_str() );
+    let samples = vec![20usize, 60, 100, 140, 180, 220];
+    let mut sampling = samples.iter().peekable();
 
     let mut cpu = CPU::new();
     let clock = sw.iter().map(|e| e.ticks).sum();
     let mut ip = sw.into_iter();
-    (1..=clock)
+
+    let sum = (1..=clock)
         .map(|cycle| {
-            print!("{cycle} - ");
             if !cpu.execute() {
-                print!("{:?}", cpu);
                 cpu.fetch( ip.next().unwrap());
             }
             (cycle,cpu.x.0)
         })
-        .inspect(|p| println!("{:?}",p))
-        .all(|_| true);
+        .filter(|(cycle,_)| {
+            if let Some(s) = sampling.peek() {
+                if cycle.eq(s) {
+                    sampling.next();
+                    true
+                } else { false }
+            } else { false }
+        })
+        .inspect(|e| println!("Sample: {:?}",e))
+        .map(|(clock, x)| x * clock as isize)
+        .sum::<isize>();
+
+    println!("{sum}");
 }
