@@ -97,8 +97,8 @@ fn main() {
     let (opcode, clock) = parse_instructions(input.as_str() );
     let mut ip = opcode.into_iter();
 
-    let samples = vec![20usize, 60, 100, 140, 180, 220];
-    let mut sampling = samples.iter().peekable();
+    let sample_intervals = vec![20usize, 60, 100, 140, 180, 220];
+    let mut sampling_interval = sample_intervals.iter().peekable();
 
     let mut cpu = CPU::new();
     let mut crt = CRT::new(40);
@@ -111,16 +111,14 @@ fn main() {
             crt.draw(cpu.x.0);
             (cycle,cpu.x.0)
         })
-        .filter(|(cycle,_)| {
-            if let Some(s) = sampling.peek() {
-                if cycle.eq(s) {
-                    sampling.next();
-                    true
-                } else { false }
-            } else { false }
-        })
+        .filter(|(cycle,_)|
+            match sampling_interval.peek() {
+                Some(&to_sample) if to_sample.eq(cycle) => { sampling_interval.next(); true }
+                _ => false
+            }
+        )
         .map(|(clock, x)| x * clock as isize)
         .sum::<isize>();
 
-    println!("{sum} is the sum of  signal strengths at {:?}", samples);
+    println!("{sum} is the sum of  signal strengths at {:?}", sample_intervals);
 }
