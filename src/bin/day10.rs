@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::str::FromStr;
 
 type Cycles = usize;
@@ -22,15 +24,19 @@ impl Instruction {
 #[derive(Debug)]
 struct Register(isize);
 
-#[derive(Debug)]
+
 struct CPU {
     x: Register,
     buffer: Option<Instruction>,
-    exec_cycle: Cycles
+    exec_cycle: Cycles,
+    ip: Option<Rc<RefCell<dyn Iterator<Item=Instruction>>>>
 }
 impl CPU {
     fn new() -> CPU {
-        CPU { x: Register(1), buffer: None, exec_cycle: 0 }
+        CPU { x: Register(1), buffer: None, exec_cycle: 0, ip: None }
+    }
+    fn load(&mut self, ops: Vec<Instruction>) {
+        self.ip = Some(Rc::new(RefCell::new(ops.into_iter())));
     }
     fn fetch(&mut self, op: Instruction) {
         self.exec_cycle = 0;
@@ -49,6 +55,16 @@ impl CPU {
             }
         }
     }
+    fn tick(&mut self) {
+        let Some(tmp) = self.ip.clone() else { panic!("")};
+        let mut iter = tmp.borrow_mut();
+        if !self.execute() {
+            self.fetch(iter.next().unwrap());
+        }
+    }
+    fn reg_x(&self) -> isize {
+        self.x.0
+    }
 }
 
 struct CRT {
@@ -65,6 +81,9 @@ impl CRT {
             if (pos-1..=pos+1).contains(&(col as isize)) { '#' } else { '.' }
         );
         if col == self.width-1 { println!() }
+    }
+    fn tick(&mut self, pos:isize) {
+        self.draw(pos);
         self.clock += 1;
     }
 }
@@ -93,21 +112,20 @@ fn main() {
     let input = std::fs::read_to_string("src/bin/day10_input.txt").expect("Ops!");
 
     let (opcode, clock) = parse_instructions(input.as_str() );
-    let mut ip = opcode.into_iter();
 
     let sample_intervals = vec![20usize, 60, 100, 140, 180, 220];
     let mut sampling_interval = sample_intervals.iter().peekable();
 
-    let mut cpu = CPU::new();
     let mut crt = CRT::new(40);
+    let mut cpu = CPU::new();
+    cpu.load(opcode);
+
 
     let sum = (1..=clock)
         .map(|cycle| {
-            if !cpu.execute() {
-                cpu.fetch( ip.next().unwrap());
-            }
-            crt.draw(cpu.x.0);
-            (cycle,cpu.x.0)
+            cpu.tick();
+            crt.tick(cpu.reg_x());
+            ( cycle, cpu.reg_x() )
         })
         .filter(|(cycle,_)|
             match sampling_interval.peek() {
