@@ -28,26 +28,26 @@ struct Register(isize);
 struct CPU {
     x: Register,
     buffer: Option<Instruction>,
-    exec_cycle: Cycles,
+    exec_cycles: Cycles,
     ip: Option<Rc<RefCell<dyn Iterator<Item=Instruction>>>>
 }
 impl CPU {
     fn new() -> CPU {
-        CPU { x: Register(1), buffer: None, exec_cycle: 0, ip: None }
+        CPU { x: Register(1), buffer: None, exec_cycles: 0, ip: None }
     }
     fn load(&mut self, ops: Vec<Instruction>) {
         self.ip = Some(Rc::new(RefCell::new(ops.into_iter())));
     }
     fn fetch(&mut self, op: Instruction) {
-        self.exec_cycle = 0;
+        self.exec_cycles = op.ticks;
         self.buffer = Some(op);
     }
     fn execute(&mut self) -> bool {
         match self.buffer {                         // Check instruction buffer
             None => false,                          // empty, not exec, go and load
             Some(op) => {                 // Instruction loaded
-                self.exec_cycle += 1;               // execution cycle #
-                if op.ticks == self.exec_cycle {    // exec cycles reached ?
+                self.exec_cycles -= 1;               // execution cycle #
+                if self.exec_cycles == 0 {           // exec cycles reached ?
                     self.x.0 += op.result();            // move Val to Reg X
                     self.buffer = None;                 // flush instruction buffer
                     false                           // not exec, go and load
@@ -56,10 +56,9 @@ impl CPU {
         }
     }
     fn tick(&mut self) {
-        let Some(tmp) = self.ip.clone() else { panic!("")};
-        let mut iter = tmp.borrow_mut();
+        let Some(iter) = self.ip.clone() else { panic!("")};
         if !self.execute() {
-            self.fetch(iter.next().unwrap());
+            self.fetch(iter.borrow_mut().next().unwrap());
         }
     }
     fn reg_x(&self) -> isize {
