@@ -4,49 +4,49 @@ use std::ops::{Add, Div, Mul, Sub};
 use std::str::FromStr;
 
 fn main() {
-    let input =
-    "Monkey 0:
-    Starting items: 79, 98
-    Operation: new = old * 19
-    Test: divisible by 23
-        If true: throw to monkey 2
-        If false: throw to monkey 3
+//     let input =
+//     "Monkey 0:
+//     Starting items: 79, 98
+//     Operation: new = old * 19
+//     Test: divisible by 23
+//         If true: throw to monkey 2
+//         If false: throw to monkey 3
+//
+// Monkey 1:
+//     Starting items: 54, 65, 75, 74
+//     Operation: new = old + 6
+//     Test: divisible by 19
+//         If true: throw to monkey 2
+//         If false: throw to monkey 0
+//
+// Monkey 2:
+//     Starting items: 79, 60, 97
+//     Operation: new = old * old
+//     Test: divisible by 13
+//         If true: throw to monkey 1
+//         If false: throw to monkey 3
+//
+// Monkey 3:
+//     Starting items: 74
+//     Operation: new = old + 3
+//     Test: divisible by 17
+//         If true: throw to monkey 0
+//         If false: throw to monkey 1";
 
-Monkey 1:
-    Starting items: 54, 65, 75, 74
-    Operation: new = old + 6
-    Test: divisible by 19
-        If true: throw to monkey 2
-        If false: throw to monkey 0
+    let input = std::fs::read_to_string("src/bin/day11_input.txt").expect("Ops!");
 
-Monkey 2:
-    Starting items: 79, 60, 97
-    Operation: new = old * old
-    Test: divisible by 13
-        If true: throw to monkey 1
-        If false: throw to monkey 3
-
-Monkey 3:
-    Starting items: 74
-    Operation: new = old + 3
-    Test: divisible by 17
-        If true: throw to monkey 0
-        If false: throw to monkey 1";
-
-    // let input = std::fs::read_to_string("src/bin/day11_input.txt").expect("Ops!");
-
-    let mut monkeys = Monkey::parse_text(input);
+    let mut monkeys = Monkey::parse_text(input.as_str());
     println!("{:?}",monkeys);
     let mut queue = vec![ VecDeque::<usize>::new(); monkeys.len()];
-    (0..1).all(|_| {
+    (0..20).all(|_| {
         monkeys.iter_mut()
             // .inspect(|e| println!("From queue: {:?}",e))
-            .map(|monkey|{
+            .map(|monkey| {
                 // pull from queue
                 while let Some(item) = queue[monkey.name].pop_front() {
                     println!("From queue: {:?}",item);
                     monkey.catch(item)
-                }
+                };
                 println!("Monkey: {:?}",monkey);
                 // observe and throw
                 let r = monkey.observe_all();
@@ -58,9 +58,10 @@ Monkey 3:
                         true
                     })
             })
-            .all(|t| t)
+            .all(|t| true)
     });
-    println!("{:?}",monkeys);
+    monkeys.sort_by(|a,b| b.inspect.cmp(&a.inspect));
+    println!("{:?}",monkeys[0].inspections() * monkeys[1].inspections());
 }
 
 
@@ -77,7 +78,8 @@ struct Monkey {
     items: VecDeque<usize>,
     op: Operation,
     test: usize,
-    send: (usize,usize)
+    send: (usize,usize),
+    inspect: usize
 }
 impl Monkey {
     fn parse_text(input: &str) -> Vec<Monkey> {
@@ -92,24 +94,25 @@ impl Monkey {
     fn catch(&mut self, item: usize) {
         self.items.push_back(item)
     }
-    fn throw(&self, worry:usize) -> Option<(usize,usize)> {
+    fn throw(&self, worry:usize) -> (usize,usize) {
         if (worry % self.test) == 0 {
             // Current worry level is divisible by 23.
             // Sent to Monkey
-            Some((self.send.0, worry))
+            (self.send.0, worry)
         } else {
             // Current worry level is not divisible by 23.
             // Sent to Monkey
-            Some((self.send.1, worry))
+            (self.send.1, worry)
         }
     }
     fn observe(&mut self) -> Option<(usize, usize)> {
+        self.inspect += 1;
         //   Monkey inspects an item with a worry level of 79.
         match self.items.pop_front() {
             Some(worry) => {
                 //     Worry level is multiplied by 19 to 1501.
                 //     Monkey gets bored with item. Worry level is divided by 3 to 500.
-                self.throw(
+                Some( self.throw(
                     match self.op {
                         Operation::Add(0) => worry.add(worry),
                         Operation::Sub(0) => worry.sub(worry),
@@ -120,7 +123,7 @@ impl Monkey {
                         Operation::Div(n) => worry / n,
                         Operation::Mul(n) => worry * n,
                     } / 3
-                )
+                ))
             }
             None => None
         }
@@ -132,6 +135,9 @@ impl Monkey {
                 out
             })
     }
+    fn inspections(&self) -> usize {
+        self.inspect
+    }
 }
 impl Default for Monkey {
     fn default() -> Self {
@@ -140,7 +146,8 @@ impl Default for Monkey {
             items: VecDeque::new(),
             op: Operation::Add(0),
             test: 0,
-            send: (0,0)
+            send: (0,0),
+            inspect: 0
         }
     }
 }
@@ -152,7 +159,6 @@ impl FromStr for Monkey {
         s.lines()
             .into_iter()
             .map(|line| line.trim().split(':').collect::<Vec<_>>())
-            // .inspect(|e| println!("{:?}",e))
             .map(|parts|{
                 let m = monkey.get_mut();
                 match parts[0] {
