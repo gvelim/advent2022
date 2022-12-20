@@ -1,46 +1,20 @@
 use std::cell::Cell;
 use std::collections::VecDeque;
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Mul};
 use std::str::FromStr;
 
 fn main() {
-//     let input =
-//     "Monkey 0:
-//     Starting items: 79, 98
-//     Operation: new = old * 19
-//     Test: divisible by 23
-//         If true: throw to monkey 2
-//         If false: throw to monkey 3
-//
-// Monkey 1:
-//     Starting items: 54, 65, 75, 74
-//     Operation: new = old + 6
-//     Test: divisible by 19
-//         If true: throw to monkey 2
-//         If false: throw to monkey 0
-//
-// Monkey 2:
-//     Starting items: 79, 60, 97
-//     Operation: new = old * old
-//     Test: divisible by 13
-//         If true: throw to monkey 1
-//         If false: throw to monkey 3
-//
-// Monkey 3:
-//     Starting items: 74
-//     Operation: new = old + 3
-//     Test: divisible by 17
-//         If true: throw to monkey 0
-//         If false: throw to monkey 1";
 
     let input = std::fs::read_to_string("src/bin/day11_input.txt").expect("Ops!");
 
     let mut monkeys = Monkey::parse_text(input.as_str());
-    println!("{:?}",monkeys);
-    let mut queue = vec![ VecDeque::<Worry>::new(); monkeys.len()];
+    let div_product: WorryType = monkeys.iter().map(|m| m.test).product();
+
+    // Queue for passing items around the monkeys
+    let mut queue = vec![VecDeque::<WorryType>::new(); monkeys.len()];
+
     (0..10000).all(|_| {
         monkeys.iter_mut()
-            // .inspect(|e| println!("From queue: {:?}",e))
             .map(|monkey| {
 
                 // pull from queue anything thrown at him
@@ -49,7 +23,7 @@ fn main() {
                 };
 
                 // observe and throw back at
-                monkey.observe_all()
+                monkey.observe_all(div_product)
                     .into_iter()
                     .filter_map(|throw| throw)
                     .all(|(monkey, item)| {
@@ -57,30 +31,30 @@ fn main() {
                         true
                     })
             })
-            .all(|t| true)
+            .all(|_| true)
     });
+
     monkeys.sort_by(|a,b| b.inspect.cmp(&a.inspect));
-    println!("{:?}",monkeys);
-    println!("{:?}",monkeys[0].inspections() * monkeys[1].inspections());
+    println!("level of monkey business after 10000 rounds : {:?}",
+             monkeys[0].inspections() * monkeys[1].inspections()
+    );
 }
 
 
-type Worry = f64;
-const WORRY_DEF: Worry = 0.0;
+type WorryType = u64;
+const WORRY_DEF: WorryType = 0;
 
 #[derive(Debug)]
 enum Operation {
-    Add(Worry),
-    Sub(Worry),
-    Div(Worry),
-    Mul(Worry),
+    Add(WorryType),
+    Mul(WorryType),
 }
 #[derive(Debug)]
 struct Monkey {
     name: usize,
-    items: VecDeque<Worry>,
+    items: VecDeque<WorryType>,
     op: Operation,
-    test: Worry,
+    test: WorryType,
     send: (usize,usize),
     inspect: usize
 }
@@ -94,11 +68,11 @@ impl Monkey {
                 out
             })
     }
-    fn catch(&mut self, item: Worry) {
+    fn catch(&mut self, item: WorryType) {
         self.items.push_back(item)
     }
-    fn throw(&self, worry:Worry) -> (usize,Worry) {
-        if (worry % self.test) == 0 as Worry {
+    fn throw(&self, worry: WorryType) -> (usize, WorryType) {
+        if (worry % self.test) == 0 as WorryType {
             // Current worry level is divisible by 23.
             // Sent to Monkey
             (self.send.0, worry)
@@ -108,22 +82,19 @@ impl Monkey {
             (self.send.1, worry)
         }
     }
-    fn observe(&mut self) -> Option<(usize, Worry)> {
+    fn observe(&mut self, div: WorryType) -> Option<(usize, WorryType)> {
         self.inspect += 1;
         //   Monkey inspects an item with a worry level of 79.
         match self.items.pop_front() {
-            Some(worry) => {
+            Some(mut worry) => {
                 //     Worry level is multiplied by 19 to 1501.
                 //     Monkey gets bored with item. Worry level is divided by 3 to 500.
+                worry %= div;
                 Some( self.throw(
                     match self.op {
                         Operation::Add(WORRY_DEF) => worry.add(worry),
-                        Operation::Sub(WORRY_DEF) => worry.sub(worry),
-                        Operation::Div(WORRY_DEF) => worry.div(worry),
                         Operation::Mul(WORRY_DEF) => worry.mul(worry),
                         Operation::Add(n) => worry + n,
-                        Operation::Sub(n) => worry - n,
-                        Operation::Div(n) => worry / n,
                         Operation::Mul(n) => worry * n,
                     }
                 ))
@@ -131,10 +102,10 @@ impl Monkey {
             None => None
         }
     }
-    fn observe_all(&mut self) -> Vec<Option<(usize,Worry)>> {
+    fn observe_all(&mut self, div: WorryType) -> Vec<Option<(usize, WorryType)>> {
         (0..self.items.len())
             .fold(vec![], |mut out, _|{
-                out.push( self.observe());
+                out.push( self.observe(div));
                 out
             })
     }
@@ -168,7 +139,7 @@ impl FromStr for Monkey {
                     "Starting items" => {
                         parts[1].split(',')
                             .into_iter()
-                            .map(|n| Worry::from_str(n.trim()).unwrap() )
+                            .map(|n| WorryType::from_str(n.trim()).unwrap() )
                             .all(|a| { m.items.push_back(a); true });
                     }
                     "Operation" => {
@@ -178,22 +149,18 @@ impl FromStr for Monkey {
                             .unwrap()
                             .split(' ')
                             .collect::<Vec<_>>()[..] else { panic!("Operation: cannot be extracted") };
-                        let a = Worry::from_str(act);
+                        let a = WorryType::from_str(act);
                         match (op,a) {
                             ("*",Ok(n)) => m.op = Operation::Mul(n),
                             ("+",Ok(n)) => m.op = Operation::Add(n),
-                            ("/",Ok(n)) => m.op = Operation::Div(n),
-                            ("-",Ok(n)) => m.op = Operation::Sub(n),
                             ("*",_) => m.op = Operation::Mul(WORRY_DEF),
                             ("+",_) => m.op = Operation::Add(WORRY_DEF),
-                            ("/",_) => m.op = Operation::Div(WORRY_DEF),
-                            ("-",_) => m.op = Operation::Sub(WORRY_DEF),
                             _ => {}
                         }
                     }
                     "Test" => {
                         let s = parts[1].trim().split("divisible by").last().unwrap().trim();
-                        m.test = Worry::from_str(s).unwrap();
+                        m.test = WorryType::from_str(s).unwrap();
                     }
                     "If true" => {
                         let s = parts[1].trim().split("throw to monkey").last().unwrap().trim();
@@ -203,8 +170,8 @@ impl FromStr for Monkey {
                         let s = parts[1].trim().split("throw to monkey").last().unwrap().trim();
                         m.send.1 = usize::from_str(s).unwrap();
                     }
-                    monk => {
-                        m.name = usize::from_str(monk.split(' ').last().unwrap().trim()).unwrap();
+                    name => {
+                        m.name = usize::from_str(name.split(' ').last().unwrap().trim()).unwrap();
                     }
                 }
             })
