@@ -56,8 +56,8 @@ impl CPU {
         }
     }
     fn tick(&mut self) {
-        let Some(iter) = self.ip.clone() else { panic!("")};
         if !self.execute() {
+            let Some(iter) = self.ip.clone() else { panic!("")};
             self.fetch(iter.borrow_mut().next().unwrap());
         }
     }
