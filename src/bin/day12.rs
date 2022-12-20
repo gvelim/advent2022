@@ -8,10 +8,9 @@ fn main() {
     let input = "Sabqponm\nabcryxxl\naccszExk\nacctuvwj\nabdefghi";
     // let input = std::fs::read_to_string("src/bin/day12_input.txt").expect("ops!");
 
-    let (grid,start,finish) = parse_forest(input);
+    let (grid,start,finish) = parse_elevation(input);
     let mut visited: Grid<(bool,Option<Coord>)> = Grid::new(grid.width, grid.height);
     let mut queue = BinaryHeap::<Step>::new();
-    println!("{:?}\n{:?}",grid,visited);
 
     // push start in the queue
     queue.push(Step(*grid.cell(start).unwrap(), start) );
@@ -40,19 +39,21 @@ fn main() {
                     p.x.saturating_add_signed(d.0),
                     p.y.saturating_add_signed(d.1)
                 ).into();
-                match visited.cell(c) {
-                    Some((false,_)) => {
-                        visited.cell_mut(c).unwrap().1 = Some(p);
-                        Some((c, grid.cell(c)))
-                    },
-                    _ => None
-                }
+                let val = grid.cell(c);
+                if val.is_some() && (node..=node+1).contains(val.unwrap()) {
+                    match visited.cell(c) {
+                        Some((false, _)) => {
+                            visited.cell_mut(c).unwrap().1 = Some(p);
+                            Some((c,*val.unwrap()))
+                        },
+                        _ => None
+                    }
+                } else { None }
             })
-            .filter(|(_,val)| (node..=node+1).contains(val.unwrap()))
             .inspect(|e| println!("{:?}",e))
-            .for_each(|(c,val)| {
-                queue.push(Step(*val.unwrap(), c));
-            });
+            .for_each(|(c,val)|
+                queue.push(Step(val, c))
+            );
         println!("==============")
     }
     println!("{:?}\n{:?}",grid,visited);
@@ -60,7 +61,7 @@ fn main() {
 
 }
 
-fn parse_forest(data: &str) -> (Grid<u8>,Coord,Coord) {
+fn parse_elevation(data: &str) -> (Grid<u8>, Coord, Coord) {
     let width = data.lines().next().unwrap().len();
     let height = data.lines().count();
     let mut grid = Grid::new(width,height);
@@ -71,11 +72,11 @@ fn parse_forest(data: &str) -> (Grid<u8>,Coord,Coord) {
             match val {
                 b'S' => {
                     start = (x, y).into();
-                    *grid.cell_mut((x,y).into()).unwrap() = 0;
+                    *grid.cell_mut(start).unwrap() = 0;
                 },
                 b'E' => {
                     finish = (x, y).into();
-                    *grid.cell_mut((x, y).into()).unwrap() = b'z'-b'a'+2;
+                    *grid.cell_mut(finish).unwrap() = b'z'-b'a'+2;
                 }
                 _ => *grid.cell_mut((x,y).into()).unwrap() = val - b'a' + 1
             }
