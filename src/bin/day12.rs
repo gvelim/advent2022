@@ -1,7 +1,4 @@
-extern crate core;
-
-use std::cmp::Ordering;
-use std::collections::BinaryHeap;
+use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};
 
 fn main() {
@@ -9,54 +6,11 @@ fn main() {
     let input = std::fs::read_to_string("src/bin/day12_input.txt").expect("ops!");
 
     let (grid,start, target) = parse_elevation(input.as_str());
-    let mut visited: Grid<(bool,Option<Coord>)> = Grid::new(grid.width, grid.height);
-    let mut queue = BinaryHeap::<Step>::new();
-    println!("{:?}:{:?},{:?}:{:?}", start, grid.square(start), target, grid.square(target));
-    // push start in the queue
-    queue.push(Step(*grid.square(start).unwrap(), start) );
-    let mut path =  Vec::<_>::new();
-    // pop from top & while still nodes in the queue
-    while let Some(Step(_, cs)) = queue.pop() {
-
-        // position matches target
-        if cs.eq( &target) {
-            // found target node
-            let mut cur = cs;
-            path.push(cur);
-            while let Some(par) = visited.square(cur).unwrap().1 {
-                path.push(par);
-                cur = par;
-            }
-            break
-        }
-
-        // mark position as visited
-        visited.square_mut(cs).unwrap().0 = true;
-        let &square = grid.square(cs).unwrap();
-
-        // evaluate neighbour squares and
-        // push to the queue the ones elevation delta <= 1
-        let delta = [(1,0), (0,-1), (0,1), (-1,0)];
-        delta.iter()
-            .for_each(|&d| {
-                let ns = Coord {
-                    x: cs.x.saturating_add_signed(d.0),
-                    y: cs.y.saturating_add_signed(d.1)
-                };
-                match visited.square(ns) {
-                    Some((false, None)) => {
-                        let &elevation = grid.square(ns).unwrap();
-                        if elevation <= square + 1 {
-                            visited.square_mut(ns).unwrap().1 = Some(cs);
-                            queue.push(Step(elevation, ns))
-                        }
-                    }
-                    _ => {}
-                };
-            });
-
-    }
+    
+    let path = grid.shortest_path(start, target);
+    
     let mut gpath: Grid<bool> = Grid::new(grid.width, grid.height);
+
     path.iter().for_each(|&a| *gpath.square_mut(a).unwrap() = true );
     println!("{}\n{:?}",path.len(),gpath);
 }
@@ -83,24 +37,6 @@ fn parse_elevation(data: &str) -> (Grid<u8>, Coord, Coord) {
         }
     }
     (grid, start, finish)
-}
-
-struct Step(u8, Coord);
-impl PartialEq<Self> for Step {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.eq(&other.0)
-    }
-}
-impl Eq for Step {}
-impl PartialOrd<Self> for Step {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.0.cmp(&other.0))
-    }
-}
-impl Ord for Step {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.0.cmp(&self.0)
-    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -148,6 +84,58 @@ impl<T> Grid<T>
             return None
         }
         Some(&mut self.grid[p.y * self.width + p.x])
+    }
+}
+
+impl Grid<u8> {
+    fn shortest_path(&self, start: Coord, target: Coord) -> Vec<Coord> {
+        let mut queue = VecDeque::<Coord>::new();
+        let mut visited: Grid<(bool, Option<Coord>)> = Grid::new(self.width, self.height);
+
+        // push start in the queue
+        queue.push_back(start);
+        let mut path = Vec::<_>::new();
+        // pop from top & while still nodes in the queue
+        while let Some(cs) = queue.pop_front() {
+
+            // position matches target
+            if cs.eq(&target) {
+                // extract parent position from target
+                let mut cur = visited.square(target).unwrap().1.unwrap();
+                while let Some(par) = visited.square(cur).unwrap().1 {
+                    path.push(par);
+                    cur = par;
+                }
+                // remove start position from path
+                path.pop();
+                break
+            }
+
+            visited.square_mut(cs).unwrap().0 = true;
+            let &square = self.square(cs).unwrap();
+
+            // evaluate neighbour squares and
+            // push to the queue the ones elevation delta <= 1
+            let delta = [(0, -1), (1, 0), (-1, 0), (0, 1)];
+            delta.iter()
+                .for_each(|&d| {
+                    let ns = Coord {
+                        x: cs.x.saturating_add_signed(d.0),
+                        y: cs.y.saturating_add_signed(d.1)
+                    };
+                    match visited.square(ns) {
+                        Some((false, None)) => {
+                            let &elevation = self.square(ns).unwrap();
+                            if elevation <= square + 1 {
+                                visited.square_mut(ns).unwrap().1 = Some(cs);
+                                queue.push_back(ns)
+                            }
+                        }
+                        _ => {}
+                    };
+                });
+        }
+        path
     }
 }
 
