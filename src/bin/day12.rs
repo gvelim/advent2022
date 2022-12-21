@@ -93,6 +93,19 @@ impl<T> Grid<T>
         }
         Some(&mut self.grid[p.y * self.width + p.x])
     }
+    fn neighbouring(&self, cs:Coord) -> impl Iterator<Item=(Coord,&'_ T)> {
+        let delta = [(0, -1), (1, 0), (-1, 0), (0, 1)];
+        delta.into_iter()
+            .filter_map(move |d|{
+                let ns = Coord {
+                    x: cs.x.saturating_add_signed(d.0),
+                    y: cs.y.saturating_add_signed(d.1)
+                };
+                if let Some(val) = self.square(ns) {
+                    Some((ns,val))
+                } else { None }
+            })
+    }
 }
 
 impl Grid<u8> {
@@ -112,10 +125,11 @@ impl Grid<u8> {
     fn shortest_path<F>(&self, start: Coord, goal:F ) -> Vec<Coord> where F: Fn(Coord)->bool {
         let mut queue = VecDeque::<Coord>::new();
         let mut visited: Grid<(bool, Option<Coord>)> = Grid::new(self.width, self.height);
+        let mut path = Vec::<_>::new();
 
         // push start in the queue
         queue.push_back(start);
-        let mut path = Vec::<_>::new();
+
         // pop from top & while still nodes in the queue
         while let Some(cs) = queue.pop_front() {
 
@@ -132,22 +146,19 @@ impl Grid<u8> {
                 break
             }
 
+            // mark square as visited
             visited.square_mut(cs).unwrap().0 = true;
+
             let &square = self.square(cs).unwrap();
 
             // evaluate neighbour squares and
-            // push to the queue the ones elevation delta <= 1
-            let delta = [(0, -1), (1, 0), (-1, 0), (0, 1)];
-            delta.iter()
-                .for_each(|&d| {
-                    let ns = Coord {
-                        x: cs.x.saturating_add_signed(d.0),
-                        y: cs.y.saturating_add_signed(d.1)
-                    };
+            // push to the queue if the have elevation delta <= 1
+            self.neighbouring(cs)
+                .for_each(|(ns, &elevation)| {
                     match visited.square(ns) {
                         Some((false, None)) => {
-                            let &elevation = self.square(ns).unwrap();
                             if elevation <= square + 1 {
+                                // capture the square we arrived from
                                 visited.square_mut(ns).unwrap().1 = Some(cs);
                                 queue.push_back(ns)
                             }
@@ -165,7 +176,7 @@ impl Debug for Grid<u8> {
         (0..self.height).for_each(|y|{
             (0..self.width).for_each(|x| {
                 let &cell = self.square((x, y).into()).unwrap();
-                if cell == 0 { write!(f, "{:^3}",'.') } else { write!(f, "{:^3?}", cell) }.expect("TODO: panic message");
+                if cell == 0 { write!(f, "{:^2}",'.') } else { write!(f, "{:^2?}", cell) }.expect("TODO: panic message");
             });
             writeln!(f).expect("failed in y");
         });
