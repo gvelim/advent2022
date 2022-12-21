@@ -47,14 +47,12 @@ impl<T> Grid<T> where T : Default + Copy {
 struct Visibility<'a> {
     forest: &'a Grid<i32>,
     visible: Grid<bool>,
-    scenic: Grid<usize>
 }
 impl Visibility<'_> {
     fn new(forest: &Grid<i32>) -> Visibility {
         Visibility {
             forest,
             visible: Grid::new(forest.width, forest.height),
-            scenic: Grid::new(forest.width, forest.height)
         }
     }
     fn count_visible(&self) -> usize {
@@ -71,7 +69,7 @@ impl Visibility<'_> {
                     let t= self.forest.tree(e).unwrap();
                     if tallest.lt(t) {
                         tallest = *t;
-                        *tree = *tree || true;
+                        *tree = true;
                     }
                 });
             });
@@ -81,14 +79,11 @@ impl Visibility<'_> {
 #[derive(Debug)]
 struct Scenic<'a> {
     forest: &'a Grid<i32>,
-    scenic: Grid<usize>
+    // scenic: Grid<usize>
 }
 impl Scenic<'_> {
     fn new(forest: &Grid<i32>) -> Scenic {
-        Scenic {
-            forest,
-            scenic: Grid::new(forest.width, forest.height)
-        }
+        Scenic { forest }
     }
     fn scenic_score_dir(&mut self, p:Coord, (dx,dy):(isize,isize)) -> usize {
         let line = (1..).into_iter().map_while(|i| {
@@ -134,10 +129,7 @@ fn main() {
 
     let mut scenic = Scenic::new(&grid);
     let max = left_to_right(&grid).into_iter()
-        .flat_map(|x| {
-            x.into_iter()
-                .map(|y| y)
-        })
+        .flat_map(|x| x)
         .map(|p| scenic.scenic_score(p))
         .max().unwrap();
     println!("Max scenic = {:?}", max);

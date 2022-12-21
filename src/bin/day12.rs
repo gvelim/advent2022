@@ -63,14 +63,13 @@ impl From<(usize,usize)> for Coord {
     }
 }
 
-struct Grid<T>
-    where T : Default + Debug + Copy {
+struct Grid<T> {
     width: usize,
     height: usize,
     grid: Vec<T>,
 }
 impl<T> Grid<T>
-    where T : Default + Debug + Copy {
+    where T : Default + Copy {
     fn new(width: usize, height: usize) -> Grid<T> {
         Grid {
             height,

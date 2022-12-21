@@ -25,9 +25,11 @@ fn main() {
                 // observe and throw back at
                 monkey.observe_all(div_product)
                     .into_iter()
-                    .filter_map(|throw| throw)
-                    .all(|(monkey, item)| {
-                        queue[monkey].push_back(item);
+                    // .filter_map(|throw| throw)
+                    .all(|throw| {
+                        throw.map(
+                            |(monkey,item)| queue[monkey].push_back(item)
+                        );
                         true
                     })
             })

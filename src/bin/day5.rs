@@ -47,7 +47,7 @@ impl Buckets {
                     .filter(|(_, c)| c.is_alphanumeric())
                     .fold(map, |mut out, (key, val)| {
                         out.entry(key)
-                            .or_insert(Vec::new())
+                            .or_insert(Vec::default())
                             .push(val);
                         out
                     })

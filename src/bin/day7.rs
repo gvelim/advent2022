@@ -58,7 +58,7 @@ impl Tree {
     fn totals(&self) -> Vec<(Path, usize)> {
         self.totals.take()
     }
-    fn parse_history(history: &Vec<LineType>) -> Tree {
+    fn parse_history(history: &[LineType]) -> Tree {
         use LineType::*;
 
         let mut map = HashMap::<Path,Node>::new();
@@ -105,7 +105,7 @@ impl History {
     fn parse(history:&str) -> Vec<LineType> {
         history.lines()
             .filter_map(|e| {
-                let p:Vec<_> = e.split(" ").collect();
+                let p:Vec<_> = e.split(' ').collect();
                 match p[0] {
                     "$" => match p[1] {
                         "ls" => Some(LineType::Cmd(CommandType::List)),

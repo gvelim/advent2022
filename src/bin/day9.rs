@@ -144,7 +144,7 @@ impl Game {
 
 fn parse_commands(input: &str) -> Vec<Step> {
     input.lines()
-        .map(|line| line.split(' ').into_iter())
+        .map(|line| line.split(' '))
         .map(|mut s| {
             let cmd = match s.next() {
                 Some("R") => Command::Right,
