@@ -9,9 +9,9 @@ fn main() {
     
     let path = grid.shortest_path(start, target);
     
-    let mut gpath: Grid<bool> = Grid::new(grid.width, grid.height);
+    let mut gpath: Grid<u8> = Grid::new(grid.width, grid.height);
 
-    path.iter().for_each(|&a| *gpath.square_mut(a).unwrap() = true );
+    path.iter().for_each(|&a| *gpath.square_mut(a).unwrap() = *grid.square(a).unwrap() );
     println!("{}\n{:?}",path.len(),gpath);
 }
 
@@ -143,8 +143,8 @@ impl Debug for Grid<u8> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         (0..self.height).for_each(|y|{
             (0..self.width).for_each(|x| {
-                let cell = self.square((x, y).into()).unwrap();
-                write!(f, "{:^4?}|",cell).expect("failed in x");
+                let &cell = self.square((x, y).into()).unwrap();
+                if cell == 0 { write!(f, "{:^3}",'.') } else { write!(f, "{:^3?}", cell) }.expect("TODO: panic message");
             });
             writeln!(f).expect("failed in y");
         });
