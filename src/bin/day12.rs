@@ -5,60 +5,60 @@ use std::collections::BinaryHeap;
 use std::fmt::{Debug, Formatter};
 
 fn main() {
-    let input = "Sabqponm\nabcryxxl\naccszExk\nacctuvwj\nabdefghi";
-    // let input = std::fs::read_to_string("src/bin/day12_input.txt").expect("ops!");
+    // let input = "Sabqponm\nabcryxxl\naccszExk\nacctuvwj\nabdefghi".to_string();
+    let input = std::fs::read_to_string("src/bin/day12_input.txt").expect("ops!");
 
-    let (grid,start,finish) = parse_elevation(input);
+    let (grid,start, target) = parse_elevation(input.as_str());
     let mut visited: Grid<(bool,Option<Coord>)> = Grid::new(grid.width, grid.height);
     let mut queue = BinaryHeap::<Step>::new();
-
+    println!("{:?}:{:?},{:?}:{:?}", start, grid.square(start), target, grid.square(target));
     // push start in the queue
-    queue.push(Step(*grid.cell(start).unwrap(), start) );
+    queue.push(Step(*grid.square(start).unwrap(), start) );
     let mut path =  Vec::<_>::new();
     // pop from top & while still nodes in the queue
-    while let Some(Step(_,p)) = queue.pop() {
-        println!("Popped: {:?}",p);
-        if p.eq( &finish) {
+    while let Some(Step(_, cs)) = queue.pop() {
+
+        // position matches target
+        if cs.eq( &target) {
             // found target node
-            let mut cur = p;
-            while let Some(par) = visited.cell(cur).unwrap().1 {
-                path.push(*grid.cell(par).unwrap());
+            let mut cur = cs;
+            path.push(cur);
+            while let Some(par) = visited.square(cur).unwrap().1 {
+                path.push(par);
                 cur = par;
             }
             break
         }
+
         // mark position as visited
-        visited.cell_mut(p).unwrap().0 = true;
-        let &node = grid.cell(p).unwrap();
+        visited.square_mut(cs).unwrap().0 = true;
+        let &square = grid.square(cs).unwrap();
 
-        // find near-by squares
-        let delta = [(-1,0), (1,0), (0,-1), (0,1)];
+        // evaluate neighbour squares and
+        // push to the queue the ones elevation delta <= 1
+        let delta = [(1,0), (0,-1), (0,1), (-1,0)];
         delta.iter()
-            .filter_map(|&d| {
-                let c = (
-                    p.x.saturating_add_signed(d.0),
-                    p.y.saturating_add_signed(d.1)
-                ).into();
-                let val = grid.cell(c);
-                if val.is_some() && (node..=node+1).contains(val.unwrap()) {
-                    match visited.cell(c) {
-                        Some((false, _)) => {
-                            visited.cell_mut(c).unwrap().1 = Some(p);
-                            Some((c,*val.unwrap()))
-                        },
-                        _ => None
+            .for_each(|&d| {
+                let ns = Coord {
+                    x: cs.x.saturating_add_signed(d.0),
+                    y: cs.y.saturating_add_signed(d.1)
+                };
+                match visited.square(ns) {
+                    Some((false, None)) => {
+                        let &elevation = grid.square(ns).unwrap();
+                        if elevation <= square + 1 {
+                            visited.square_mut(ns).unwrap().1 = Some(cs);
+                            queue.push(Step(elevation, ns))
+                        }
                     }
-                } else { None }
-            })
-            .inspect(|e| println!("{:?}",e))
-            .for_each(|(c,val)|
-                queue.push(Step(val, c))
-            );
-        println!("==============")
-    }
-    println!("{:?}\n{:?}",grid,visited);
-    println!("Path: {}:{:?}",path.len(),path);
+                    _ => {}
+                };
+            });
 
+    }
+    let mut gpath: Grid<bool> = Grid::new(grid.width, grid.height);
+    path.iter().for_each(|&a| *gpath.square_mut(a).unwrap() = true );
+    println!("{}\n{:?}",path.len(),gpath);
 }
 
 fn parse_elevation(data: &str) -> (Grid<u8>, Coord, Coord) {
@@ -72,13 +72,13 @@ fn parse_elevation(data: &str) -> (Grid<u8>, Coord, Coord) {
             match val {
                 b'S' => {
                     start = (x, y).into();
-                    *grid.cell_mut(start).unwrap() = 0;
+                    *grid.square_mut(start).unwrap() = 0;
                 },
                 b'E' => {
                     finish = (x, y).into();
-                    *grid.cell_mut(finish).unwrap() = b'z'-b'a'+2;
+                    *grid.square_mut(finish).unwrap() = b'z'-b'a'+2;
                 }
-                _ => *grid.cell_mut((x,y).into()).unwrap() = val - b'a' + 1
+                _ => *grid.square_mut((x, y).into()).unwrap() = val - b'a' + 1
             }
         }
     }
@@ -137,13 +137,13 @@ impl<T> Grid<T>
     fn in_bounds(&self, p:Coord) -> bool {
         p.x < self.width && p.y < self.height
     }
-    fn cell(&self, p: Coord) -> Option<&T> {
+    fn square(&self, p: Coord) -> Option<&T> {
         if !self.in_bounds(p) {
             return None
         }
         Some(&self.grid[p.y * self.width + p.x])
     }
-    fn cell_mut(&mut self, p: Coord) -> Option<&mut T> {
+    fn square_mut(&mut self, p: Coord) -> Option<&mut T> {
         if !self.in_bounds(p) {
             return None
         }
@@ -151,13 +151,25 @@ impl<T> Grid<T>
     }
 }
 
-impl<T> Debug for Grid<T>
-    where T : Default + Debug + Copy {
+impl Debug for Grid<u8> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         (0..self.height).for_each(|y|{
             (0..self.width).for_each(|x| {
-                let cell = self.cell((x,y).into()).unwrap();
-                write!(f, "{:4?}|",cell).expect("failed in x");
+                let cell = self.square((x, y).into()).unwrap();
+                write!(f, "{:^4?}|",cell).expect("failed in x");
+            });
+            writeln!(f).expect("failed in y");
+        });
+        Ok(())
+    }
+}
+
+impl Debug for Grid<bool> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        (0..self.height).for_each(|y|{
+            (0..self.width).for_each(|x| {
+                let &cell = self.square((x, y).into()).unwrap();
+                write!(f, "{:^2}",if cell {'*'} else {'.'} ).expect("failed in x");
             });
             writeln!(f).expect("failed in y");
         });
