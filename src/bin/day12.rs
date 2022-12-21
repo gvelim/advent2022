@@ -2,17 +2,25 @@ use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};
 
 fn main() {
-    // let input = "Sabqponm\nabcryxxl\naccszExk\nacctuvwj\nabdefghi".to_string();
     let input = std::fs::read_to_string("src/bin/day12_input.txt").expect("ops!");
 
-    let (grid,start, target) = parse_elevation(input.as_str());
-    
-    let path = grid.shortest_path(start, target);
-    
-    let mut gpath: Grid<u8> = Grid::new(grid.width, grid.height);
+    // parse elevations onto a grid
+    let (mut grid,start, target) = parse_elevation(input.as_str());
 
-    path.iter().for_each(|&a| *gpath.square_mut(a).unwrap() = *grid.square(a).unwrap() );
-    println!("{}\n{:?}",path.len(),gpath);
+    // find path with closure fn() goal set at reaching the target coordinate
+    let path = grid.shortest_path(start,|cs| cs.eq(&target));
+
+    // visualise path produced
+    grid.visualise_path(path);
+
+    // reverse the elevation so E(0) and S(27)
+    grid.reverse_elevation();
+
+    // find path with closure fn() goal set as reaching elevation(26) = a
+    let path = grid.shortest_path(target, |cs| 26.eq(grid.square(cs).unwrap()));
+
+    // visualise path produced
+    grid.visualise_path(path);
 }
 
 fn parse_elevation(data: &str) -> (Grid<u8>, Coord, Coord) {
@@ -88,7 +96,20 @@ impl<T> Grid<T>
 }
 
 impl Grid<u8> {
-    fn shortest_path(&self, start: Coord, target: Coord) -> Vec<Coord> {
+    fn reverse_elevation(&mut self) {
+        let &max = self.grid.iter().max().unwrap();
+        self.grid.iter_mut()
+            .map(|val|{
+                *val = max - *val;
+            })
+            .all(|_| true);
+    }
+    fn visualise_path(&self, path:Vec<Coord>) {
+        let mut gpath: Grid<u8> = Grid::new(self.width, self.height);
+        path.iter().for_each(|&a| *gpath.square_mut(a).unwrap() = *self.square(a).unwrap() );
+        println!("Path length: {}\n{:?}",path.len(),gpath);
+    }
+    fn shortest_path<F>(&self, start: Coord, goal:F ) -> Vec<Coord> where F: Fn(Coord)->bool {
         let mut queue = VecDeque::<Coord>::new();
         let mut visited: Grid<(bool, Option<Coord>)> = Grid::new(self.width, self.height);
 
@@ -99,9 +120,9 @@ impl Grid<u8> {
         while let Some(cs) = queue.pop_front() {
 
             // position matches target
-            if cs.eq(&target) {
+            if goal(cs) {
                 // extract parent position from target
-                let mut cur = visited.square(target).unwrap().1.unwrap();
+                let mut cur = cs;
                 while let Some(par) = visited.square(cur).unwrap().1 {
                     path.push(par);
                     cur = par;
