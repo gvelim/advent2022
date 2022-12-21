@@ -101,9 +101,8 @@ impl<T> Grid<T>
                     x: cs.x.saturating_add_signed(d.0),
                     y: cs.y.saturating_add_signed(d.1)
                 };
-                if let Some(val) = self.square(ns) {
-                    Some((ns,val))
-                } else { None }
+                self.square(ns)
+                    .map(|val| (ns,val) )
             })
     }
 }
@@ -155,17 +154,14 @@ impl Grid<u8> {
             // push to the queue if the have elevation delta <= 1
             self.neighbouring(cs)
                 .for_each(|(ns, &elevation)| {
-                    match visited.square(ns) {
-                        Some((false, None)) => {
-                            if elevation <= square + 1 {
-                                // capture the square we arrived from
-                                visited.square_mut(ns).unwrap().1 = Some(cs);
-                                queue.push_back(ns)
-                            }
+                    if let Some((false, None)) = visited.square(ns) {
+                        if elevation <= square + 1 {
+                            // capture the square we arrived from
+                            visited.square_mut(ns).unwrap().1 = Some(cs);
+                            queue.push_back(ns)
                         }
-                        _ => {}
-                    };
-                });
+                    }
+                })
         }
         path
     }
