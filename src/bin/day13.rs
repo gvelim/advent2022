@@ -9,7 +9,7 @@ fn packets_in_right_order(input: &str) -> usize {
         .into_iter()
         .map(|x| x.lines().collect::<Vec<_>>() )
         .map(|d|
-            (ListItem::parse(d[0]), ListItem::parse(d[1]))
+            (ListItem::from_str(d[0]), ListItem::from_str(d[1]))
         )
         .enumerate()
         .filter_map(|(i,(l,r))|
@@ -28,8 +28,8 @@ fn get_decoder_key(input: &str) -> usize {
     let mut order = input.split("\n\n")
         .into_iter()
         .flat_map(|x| x.lines() )
-        .map(|d|
-            ListItem::parse(d)
+        .filter_map(|d|
+            ListItem::from_str(d).ok()
         )
         .chain(vec![ L(vec![N(2)]), L(vec![N(6)])])
         .fold(vec![], |mut out, item|{
@@ -69,8 +69,12 @@ impl ListItem {
             (_,_) => unreachable!()
         }
     }
+}
 
-    fn parse(inp: &str) -> ListItem {
+impl FromStr for ListItem {
+    type Err = ();
+
+    fn from_str(inp: &str) -> Result<Self, Self::Err> {
 
         struct Scanner<I: Iterator<Item=char>> {
             i: Peekable<I>,
@@ -108,7 +112,7 @@ impl ListItem {
         }
         let mut i = inp.chars().peekable();
         i.next();
-        Scanner::new(i).parse_list()
+        Ok(Scanner::new(i).parse_list())
     }
 }
 
