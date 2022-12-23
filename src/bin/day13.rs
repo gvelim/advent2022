@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::iter::Peekable;
 use std::str::FromStr;
@@ -26,7 +27,7 @@ let input = "[1,1,3,1,1]
 [[]]
 
 [1,[2,[3,[4,[5,6,7]]]],8,9]
-[1,[2,[3,[4,[5,6,0]]]],8,9]";
+[1,[2,[3,[4,[5,6,0]]]],8,9]".to_string();
 
     input.split("\n\n")
         .into_iter()
@@ -34,12 +35,64 @@ let input = "[1,1,3,1,1]
         .map(|d|
                  (ListItem::parse(d[0]), ListItem::parse(d[1]))
         )
+        .enumerate()
+        .filter_map(|(i,(l,r))|
+            if l.lt(&r) {
+                Some(i)
+            } else { None }
+        )
         .inspect(|l| println!("{:?}",l))
         .all(|_| true);
 
-    let p = ListItem::parse("[1,[2,[3,[4,[5,6,0]]]],8,9]");
-    let L(v) = p else { panic!("") };
-    println!("{:?}",v[0]);
+    let l = ListItem::parse("[9]");
+    let r = ListItem::parse("[[8,7,6]]");
+    println!("{:?}",l.partial_cmp(&r));
+}
+
+impl PartialEq<Self> for ListItem {
+    fn eq(&self, other: &Self) -> bool {
+        todo!()
+    }
+}
+
+impl PartialOrd for ListItem {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (self,other) {
+            (L(l), L(r)) => {
+                println!("(L(l), L(r)) - {:?},{:?}",self,other);
+                let mut liter = l.iter();
+                let mut riter = r.iter();
+
+                loop {
+                    match (liter.next(),riter.next()) {
+                        (Some(l), Some(r)) =>
+                            match l.partial_cmp(r).unwrap() {
+                                Ordering::Equal => {}
+                                ord@(Ordering::Less |
+                                Ordering::Greater) => break Some(ord),
+                            },
+                        (Some(_), None) => break Some(Ordering::Greater),
+                        (None, Some(_)) => break Some(Ordering::Less),
+                        (None,None) => break Some(Ordering::Equal),
+                    };
+                }
+            }
+            (L(_), N(r)) => {
+                println!("(L(_), N(r)) - {:?},{:?}",self,other);
+                let right = L(vec![N(*r)]);
+                self.partial_cmp(&right)
+            }
+            (N(l), L(_)) => {
+                println!("(N(l), L(_)) - {:?},{:?}",self,other);
+                let left = L(vec![N(*l)]);
+                left.partial_cmp(other)
+            }
+            (N(l), N(r)) => {
+                println!("(N(l), N(r) - {:?},{:?}",self,other);
+                Some(l.cmp(r))
+            },
+        }
+    }
 }
 
 
@@ -61,7 +114,6 @@ impl ListItem {
                 let mut s = String::new();
                 let mut v = L(vec![]);
                 loop {
-                    // println!("{:?}, {:?}, {:?}",v, s, self.i.peek());
                     match &self.i.peek() {
                         Some('[') => {
                             self.i.next();
@@ -85,7 +137,9 @@ impl ListItem {
                 }
             }
         }
-        Scanner::new(inp.chars().peekable()).parse_list()
+        let mut i = inp.chars().peekable();
+        i.next();
+        Scanner::new(i).parse_list()
     }
     fn insert(&mut self, item:ListItem) {
         match (self,item) {
