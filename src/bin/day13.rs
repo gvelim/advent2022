@@ -5,31 +5,12 @@ use std::str::FromStr;
 use crate::ListItem::{L, N};
 
 fn main() {
-let input = "[1,1,3,1,1]
-[1,1,5,1,1]
+    // let input = "[1,1,3,1,1]\n[1,1,5,1,1]\n\n[[1],[2,3,4]]\n[[1],4]\n\n[9]\n[[8,7,6]]\n\n[[4,4],4,4]\n[[4,4],4,4,4]\n\n\
+    // [7,7,7,7]\n[7,7,7]\n\n[]\n[3]\n\n[[[]]]\n[[]]\n\n[1,[2,[3,[4,[5,6,7]]]],8,9]\n[1,[2,[3,[4,[5,6,0]]]],8,9]".to_string();
 
-[[1],[2,3,4]]
-[[1],4]
+    let input = std::fs::read_to_string("src/bin/day13_input.txt").expect("Ops!");
 
-[9]
-[[8,7,6]]
-
-[[4,4],4,4]
-[[4,4],4,4,4]
-
-[7,7,7,7]
-[7,7,7]
-
-[]
-[3]
-
-[[[]]]
-[[]]
-
-[1,[2,[3,[4,[5,6,7]]]],8,9]
-[1,[2,[3,[4,[5,6,0]]]],8,9]".to_string();
-
-    input.split("\n\n")
+    let res :usize = input.split("\n\n")
         .into_iter()
         .map(|x| x.lines().collect::<Vec<_>>() )
         .map(|d|
@@ -38,19 +19,17 @@ let input = "[1,1,3,1,1]
         .enumerate()
         .filter_map(|(i,(l,r))|
             if l.lt(&r) {
-                Some(i)
+                Some(i+1)
             } else { None }
         )
-        .inspect(|l| println!("{:?}",l))
-        .all(|_| true);
+        // .inspect(|l| println!("{:?}",l))
+        .sum();
 
-    let l = ListItem::parse("[9]");
-    let r = ListItem::parse("[[8,7,6]]");
-    println!("{:?}",l.partial_cmp(&r));
+    println!("{:?}",res);
 }
 
 impl PartialEq<Self> for ListItem {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, _: &Self) -> bool {
         todo!()
     }
 }
@@ -59,7 +38,7 @@ impl PartialOrd for ListItem {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self,other) {
             (L(l), L(r)) => {
-                println!("(L(l), L(r)) - {:?},{:?}",self,other);
+                // println!("(L(l), L(r)) - {:?},{:?}",self,other);
                 let mut liter = l.iter();
                 let mut riter = r.iter();
 
@@ -78,17 +57,17 @@ impl PartialOrd for ListItem {
                 }
             }
             (L(_), N(r)) => {
-                println!("(L(_), N(r)) - {:?},{:?}",self,other);
+                // println!("(L(_), N(r)) - {:?},{:?}",self,other);
                 let right = L(vec![N(*r)]);
                 self.partial_cmp(&right)
             }
             (N(l), L(_)) => {
-                println!("(N(l), L(_)) - {:?},{:?}",self,other);
+                // println!("(N(l), L(_)) - {:?},{:?}",self,other);
                 let left = L(vec![N(*l)]);
                 left.partial_cmp(other)
             }
             (N(l), N(r)) => {
-                println!("(N(l), N(r) - {:?},{:?}",self,other);
+                // println!("(N(l), N(r) - {:?},{:?}",self,other);
                 Some(l.cmp(r))
             },
         }
