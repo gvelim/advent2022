@@ -19,26 +19,29 @@ fn packets_in_right_order(input: &str) -> usize {
 }
 
 fn get_decoder_key(input: &str) -> usize {
-    let mut inp: String = input.into();
-    inp += "\n\n[[2]]\n[[6]]";
 
-    let mut order = inp.split("\n\n")
+    let dividers = vec![
+        L(vec![N(2)]),
+        L(vec![N(6)])
+    ];
+
+    let mut order = input.split("\n\n")
         .into_iter()
         .flat_map(|x| x.lines() )
         .map(|d|
             ListItem::parse(d)
         )
+        .chain(vec![ L(vec![N(2)]), L(vec![N(6)])])
         .fold(vec![], |mut out, item|{
             out.push(item);
             out
         });
+
     order.sort();
-    order.iter().enumerate()
-        .for_each(|(i,l)| println!("{}. {:?}",i+1,l));
 
-    (order.iter().position(|item| L(vec![N(2)]).eq(item) ).unwrap() + 1)
-        * (order.iter().position(|item| L(vec![N(6)]).eq(item) ).unwrap() + 1)
-
+    dividers.iter()
+        .map(|d| order.binary_search(d).unwrap() + 1 )
+        .product()
 }
 
 fn main() {
