@@ -115,16 +115,10 @@ impl PartialEq<Self> for ListItem {
     }
 }
 
-impl Eq for ListItem {
-}
+impl Eq for ListItem {}
 
 impl Ord for ListItem {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
-    }
-}
-impl PartialOrd for ListItem {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self,other) {
             (L(l), L(r)) => {
                 let mut liter = l.iter();
@@ -133,27 +127,34 @@ impl PartialOrd for ListItem {
                 loop {
                     match (liter.next(),riter.next()) {
                         (Some(l), Some(r)) =>
-                            match l.partial_cmp(r).unwrap() {
+                            match l.cmp(r) {
                                 Ordering::Equal => {}
                                 ord@
-                                (Ordering::Less | Ordering::Greater) => break Some(ord),
+                                (Ordering::Less | Ordering::Greater) => break ord,
                             },
-                        (Some(_), None) => break Some(Ordering::Greater),
-                        (None, Some(_)) => break Some(Ordering::Less),
-                        (None,None) => break Some(Ordering::Equal),
+                        (Some(_), None) => break Ordering::Greater,
+                        (None, Some(_)) => break Ordering::Less,
+                        (None,None) => break Ordering::Equal,
                     };
                 }
             }
             (L(_), N(r)) => {
                 let right = L(vec![N(*r)]);
-                self.partial_cmp(&right)
+                self.cmp(&right)
             }
             (N(l), L(_)) => {
                 let left = L(vec![N(*l)]);
-                left.partial_cmp(other)
+                left.cmp(other)
             }
-            (N(l), N(r)) => Some(l.cmp(r)),
+            (N(l), N(r)) => l.cmp(r),
         }
+
+    }
+}
+
+impl PartialOrd for ListItem {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
