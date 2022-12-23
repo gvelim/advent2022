@@ -36,6 +36,10 @@ let input = "[1,1,3,1,1]
         )
         .inspect(|l| println!("{:?}",l))
         .all(|_| true);
+
+    let p = ListItem::parse("[1,[2,[3,[4,[5,6,0]]]],8,9]");
+    let L(v) = p else { panic!("") };
+    println!("{:?}",v[0]);
 }
 
 
@@ -72,7 +76,8 @@ impl ListItem {
                                 break v
                             }
                         },
-                        Some(',') | Some(']') => {}
+                        Some(',') => {}
+                        Some(']') => break v,
                         None => break v,
                         _ => unreachable!()
                     }
