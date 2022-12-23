@@ -4,82 +4,69 @@ use std::iter::Peekable;
 use std::str::FromStr;
 use crate::ListItem::{L, N};
 
+fn packets_in_right_order(input: &str) -> usize {
+    input.split("\n\n")
+        .into_iter()
+        .map(|x| x.lines().collect::<Vec<_>>() )
+        .map(|d|
+            (ListItem::parse(d[0]), ListItem::parse(d[1]))
+        )
+        .enumerate()
+        .filter_map(|(i,(l,r))|
+            if l.lt(&r) { Some(i+1) } else { None }
+        )
+        .sum()
+}
+
+fn get_decoder_key(input: &str) -> usize {
+    let mut inp: String = input.into();
+    inp += "\n\n[[2]]\n[[6]]";
+
+    let mut order = inp.split("\n\n")
+        .into_iter()
+        .flat_map(|x| x.lines() )
+        .map(|d|
+            ListItem::parse(d)
+        )
+        .fold(vec![], |mut out, item|{
+            out.push(item);
+            out
+        });
+    order.sort();
+    order.iter().enumerate()
+        .for_each(|(i,l)| println!("{}. {:?}",i+1,l));
+
+    (order.iter().position(|item| L(vec![N(2)]).eq(item) ).unwrap() + 1)
+        * (order.iter().position(|item| L(vec![N(6)]).eq(item) ).unwrap() + 1)
+
+}
+
 fn main() {
-    // let input = "[1,1,3,1,1]\n[1,1,5,1,1]\n\n[[1],[2,3,4]]\n[[1],4]\n\n[9]\n[[8,7,6]]\n\n[[4,4],4,4]\n[[4,4],4,4,4]\n\n\
+    // let mut input = "[1,1,3,1,1]\n[1,1,5,1,1]\n\n[[1],[2,3,4]]\n[[1],4]\n\n[9]\n[[8,7,6]]\n\n[[4,4],4,4]\n[[4,4],4,4,4]\n\n\
     // [7,7,7,7]\n[7,7,7]\n\n[]\n[3]\n\n[[[]]]\n[[]]\n\n[1,[2,[3,[4,[5,6,7]]]],8,9]\n[1,[2,[3,[4,[5,6,0]]]],8,9]".to_string();
 
     let input = std::fs::read_to_string("src/bin/day13_input.txt").expect("Ops!");
 
-    let res :usize = input.split("\n\n")
-        .into_iter()
-        .map(|x| x.lines().collect::<Vec<_>>() )
-        .map(|d|
-                 (ListItem::parse(d[0]), ListItem::parse(d[1]))
-        )
-        .enumerate()
-        .filter_map(|(i,(l,r))|
-            if l.lt(&r) {
-                Some(i+1)
-            } else { None }
-        )
-        // .inspect(|l| println!("{:?}",l))
-        .sum();
+    let res = packets_in_right_order(input.as_str());
+    println!("Correctly ordered packets = {:?}",res);
+    let res = get_decoder_key(input.as_str());
+    println!("Decoder Key = {:?}",res);
 
-    println!("{:?}",res);
 }
-
-impl PartialEq<Self> for ListItem {
-    fn eq(&self, _: &Self) -> bool {
-        todo!()
-    }
-}
-
-impl PartialOrd for ListItem {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match (self,other) {
-            (L(l), L(r)) => {
-                // println!("(L(l), L(r)) - {:?},{:?}",self,other);
-                let mut liter = l.iter();
-                let mut riter = r.iter();
-
-                loop {
-                    match (liter.next(),riter.next()) {
-                        (Some(l), Some(r)) =>
-                            match l.partial_cmp(r).unwrap() {
-                                Ordering::Equal => {}
-                                ord@(Ordering::Less |
-                                Ordering::Greater) => break Some(ord),
-                            },
-                        (Some(_), None) => break Some(Ordering::Greater),
-                        (None, Some(_)) => break Some(Ordering::Less),
-                        (None,None) => break Some(Ordering::Equal),
-                    };
-                }
-            }
-            (L(_), N(r)) => {
-                // println!("(L(_), N(r)) - {:?},{:?}",self,other);
-                let right = L(vec![N(*r)]);
-                self.partial_cmp(&right)
-            }
-            (N(l), L(_)) => {
-                // println!("(N(l), L(_)) - {:?},{:?}",self,other);
-                let left = L(vec![N(*l)]);
-                left.partial_cmp(other)
-            }
-            (N(l), N(r)) => {
-                // println!("(N(l), N(r) - {:?},{:?}",self,other);
-                Some(l.cmp(r))
-            },
-        }
-    }
-}
-
 
 enum ListItem {
     N(u8),
     L(Vec<ListItem>)
 }
 impl ListItem {
+    fn insert(&mut self, item:ListItem) {
+        match (self,item) {
+            (L(list), item) => list.push(item),
+            (N(old), N(new)) => *old = new,
+            (_,_) => unreachable!()
+        }
+    }
+
     fn parse(inp: &str) -> ListItem {
 
         struct Scanner<I: Iterator<Item=char>> {
@@ -96,7 +83,7 @@ impl ListItem {
                     match &self.i.peek() {
                         Some('[') => {
                             self.i.next();
-                            v.insert( self.parse_list());
+                            v.insert(self.parse_list());
                         },
                         Some(&c@ '0'..='9') => s.push(c),
                         &c@
@@ -120,14 +107,56 @@ impl ListItem {
         i.next();
         Scanner::new(i).parse_list()
     }
-    fn insert(&mut self, item:ListItem) {
-        match (self,item) {
-            (L(list), item) => list.push(item),
-            (N(old), N(new)) => *old = new,
-            (_,_) => unreachable!()
+}
+
+impl PartialEq<Self> for ListItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.partial_cmp(other) == Some(Ordering::Equal)
+    }
+}
+
+impl Eq for ListItem {
+}
+
+impl Ord for ListItem {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+impl PartialOrd for ListItem {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (self,other) {
+            (L(l), L(r)) => {
+                let mut liter = l.iter();
+                let mut riter = r.iter();
+
+                loop {
+                    match (liter.next(),riter.next()) {
+                        (Some(l), Some(r)) =>
+                            match l.partial_cmp(r).unwrap() {
+                                Ordering::Equal => {}
+                                ord@
+                                (Ordering::Less | Ordering::Greater) => break Some(ord),
+                            },
+                        (Some(_), None) => break Some(Ordering::Greater),
+                        (None, Some(_)) => break Some(Ordering::Less),
+                        (None,None) => break Some(Ordering::Equal),
+                    };
+                }
+            }
+            (L(_), N(r)) => {
+                let right = L(vec![N(*r)]);
+                self.partial_cmp(&right)
+            }
+            (N(l), L(_)) => {
+                let left = L(vec![N(*l)]);
+                left.partial_cmp(other)
+            }
+            (N(l), N(r)) => Some(l.cmp(r)),
         }
     }
 }
+
 impl Debug for ListItem {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
