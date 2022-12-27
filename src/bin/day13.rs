@@ -21,8 +21,8 @@ fn packets_in_right_order(input: &str) -> usize {
 fn get_decoder_key(input: &str) -> usize {
 
     let dividers = vec![
-        L(vec![N(2)]),
-        L(vec![N(6)])
+        L(vec![L(vec![N(2)])]),
+        L(vec![L(vec![N(6)])])
     ];
 
     let mut order = input.split("\n\n")
@@ -31,13 +31,14 @@ fn get_decoder_key(input: &str) -> usize {
         .filter_map(|d|
             ListItem::from_str(d).ok()
         )
-        .chain(vec![ L(vec![N(2)]), L(vec![N(6)])])
+        .chain(vec![ L(vec![L(vec![N(2)])]), L(vec![L(vec![N(6)])]) ] )
         .fold(vec![], |mut out, item|{
             out.push(item);
             out
         });
 
     order.sort();
+    order.iter().for_each(|d| println!("{:?}",d));
 
     dividers.iter()
         .map(|d| order.binary_search(d).unwrap() + 1 )
@@ -169,15 +170,7 @@ impl Debug for ListItem {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             N(n) => write!(f,"{n}")?,
-            L(v) => {
-                write!(f,"[")?;
-                let len = v.len();
-                for (i,li) in v.iter().enumerate() {
-                    li.fmt(f)?;
-                    if i < len-1 { write!(f,",")?; }
-                }
-                write!(f,"]")?;
-            }
+            L(v) => f.debug_list().entries(v.iter()).finish()?
         };
         Ok(())
     }
