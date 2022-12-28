@@ -38,9 +38,10 @@ fn main() {
     let (max, plines) = parse_plines(input.as_str());
     println!("Max {:?}",max);
 
-    let mut board: Board<Mat> = Board::new(max.x+1,max.y+1+11);
+    let mut board: Board<Mat> = Board::new((max.x<<1)+1,max.y+2+1);
     let painter = board.get_painter();
 
+    painter.rock_wall((0,max.y+2).into(), (max.x<<1,max.y+2).into());
     plines
         .into_iter()
         .all(|pline| {
@@ -52,9 +53,11 @@ fn main() {
         let mut pos = Coord { x: 500, y: 0 };
         let mut grain = board.get_grain(pos);
         // let the grain fall until moves no further
-        while let Some(p) = grain.move_one() { pos = p };
+        while let Some(p) = grain.move_one() { println!("{:?}",p); pos = p };
         // cannot move anymore either (a) settled or (b) reached end of board
-        if !grain.is_settled() {
+        if !grain.is_settled() || pos.y == 0 {
+            println!("{:?}",pos);
+            *board.square_mut(pos).unwrap() = Mat::Sand;
             break pos
         }
         *board.square_mut(pos).unwrap() = Mat::Sand;
