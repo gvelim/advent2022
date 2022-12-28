@@ -4,8 +4,8 @@ use std::str::FromStr;
 
 fn main() {
 
-    let input = "498,4 -> 498,6 -> 496,6\n503,4 -> 502,4 -> 502,9 -> 494,9".to_string();
-    // let input = std::fs::read_to_string("src/bin/day14_input.txt").expect("ops!");
+    // let input = "498,4 -> 498,6 -> 496,6\n503,4 -> 502,4 -> 502,9 -> 494,9".to_string();
+    let input = std::fs::read_to_string("src/bin/day14_input.txt").expect("ops!");
 
     // parse the board's wall layout
     let (max, plines) = parse_plines(input.as_str());
