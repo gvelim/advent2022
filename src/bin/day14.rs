@@ -38,17 +38,58 @@ fn main() {
     let (max, plines) = parse_plines(input.as_str());
     println!("Max {:?}",max);
 
-    let mut board: Board<Mat> = Board::new(max.x<<1,max.y+1);
+    let mut board: Board<Mat> = Board::new(max.x+1,max.y+1+11);
     let painter = board.get_painter();
 
     plines
         .into_iter()
         .all(|pline| {
-            painter.polyline(&pline);
+            painter.rock_walls(&pline);
             true
         });
 
-    println!("{:?}",board);
+    let pos = loop {
+        let mut pos = Coord { x: 500, y: 0 };
+        let mut grain = board.get_grain(pos);
+        // let the grain fall until moves no further
+        while let Some(p) = grain.move_one() { pos = p };
+        // cannot move anymore either (a) settled or (b) reached end of board
+        if !grain.is_settled() {
+            break pos
+        }
+        *board.square_mut(pos).unwrap() = Mat::Sand;
+    };
+    println!("{:?} - {}\n{:?}", pos, board.grains_rest(), board);
+}
+
+struct Grain<'a> {
+    pos: Coord,
+    settled: bool,
+    board: RefCell<&'a mut Board<Mat>>
+}
+
+impl Grain<'_> {
+    fn move_one(&mut self) -> Option<Coord> {
+        if self.settled { return None }
+        let board = self.board.borrow_mut();
+        let Coord{ x, y} = self.pos;
+
+        let l = board.square( (x-1,y+1).into() );
+        let u = board.square( (x,y+1).into() );
+        let r = board.square( (x+1,y+1).into() );
+
+        match (l,u,r) {
+            (_, Some(Mat::Air), _) => self.pos = (x,y+1).into(),
+            (Some(Mat::Air), _, _) => self.pos = (x-1,y+1).into(),
+            (_, _, Some(Mat::Air)) => self.pos = (x+1,y+1).into(),
+            (_, None, _) => return None,
+            (_, _, _) => self.settled = true
+        }
+        Some(self.pos)
+    }
+    fn is_settled(&self) -> bool {
+        self.settled
+    }
 }
 
 #[derive(Ord, PartialOrd,Copy, Clone, Eq, PartialEq)]
@@ -67,7 +108,7 @@ impl From<(usize,usize)> for Coord {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(PartialEq, Copy, Clone)]
 enum Mat { Rock, Sand, Air }
 impl Default for Mat {
     fn default() -> Self { Mat::Air }
@@ -76,6 +117,14 @@ impl Default for Mat {
 impl Board<Mat> {
     fn get_painter(&mut self) -> Painter {
         Painter { board: RefCell::new(self) }
+    }
+    fn get_grain(&mut self, pos: Coord) -> Grain {
+        Grain { pos, settled: false, board: RefCell::new(self) }
+    }
+    fn grains_rest(&self) -> usize {
+        self.grid.iter()
+            .filter(|&s| *s == Mat::Sand )
+            .count()
     }
 }
 
@@ -88,7 +137,7 @@ impl Painter<'_> {
         let mut board = self.board.borrow_mut();
         *(*board).square_mut(p).unwrap() = mat;
     }
-    fn line(&self, a: Coord, b: Coord) {
+    fn rock_wall(&self, a: Coord, b: Coord) {
         let x_range = if a.x <= b.x { a.x ..= b.x } else { b.x ..= a.x };
         x_range
             .flat_map(|x| {
@@ -100,10 +149,10 @@ impl Painter<'_> {
                 true
             });
     }
-    fn polyline(&self, c: &[Coord]) {
+    fn rock_walls(&self, c: &[Coord]) {
         c.windows(2)
             .all(| p| {
-                self.line(p[0], p[1]);
+                self.rock_wall(p[0], p[1]);
                 true
             });
     }
@@ -142,10 +191,13 @@ impl<T> Board<T>
 
 impl Debug for Board<Mat> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f,"   |").expect("failed in y");
+        (0..self.width).for_each(|x| { write!(f, "{:^3}",x).expect("ops") });
+        writeln!(f).expect("");
         (0..self.height).for_each(|y|{
-            write!(f,"{y}|").expect("failed in y");
+            write!(f,"{y:3}|").expect("failed in y");
             (0..self.width).for_each(|x| {
-                write!(f, "{:^2}",
+                write!(f, "{:^3}",
                        match self.square((x, y).into()).unwrap() {
                            Mat::Air => '.',
                            Mat::Rock => '#',
