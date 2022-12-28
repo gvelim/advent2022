@@ -2,67 +2,68 @@ use std::cell::RefCell;
 use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
 
+fn main() {
+
+    let input = "498,4 -> 498,6 -> 496,6\n503,4 -> 502,4 -> 502,9 -> 494,9".to_string();
+    // let input = std::fs::read_to_string("src/bin/day14_input.txt").expect("ops!");
+
+    // parse the board's wall layout
+    let (max, plines) = parse_plines(input.as_str());
+
+    let mut board: Board<Mat> = Board::new((max.x<<1)+1,max.y+2+1);
+
+    // paint layout on the board
+    let painter = board.get_painter();
+    plines
+        .into_iter()
+        .for_each(|pline|
+            painter.rock_walls(&pline)
+        );
+
+    // run the sand simulation until we reach the abyss, that is, grain stopped but not settled
+    let start = (500,0).into();
+    board.run(
+        start, |g| !g.is_settled()
+    );
+    println!("Scenario 1: Grains Rest: {}\n{:?}", board.grains_rest()-1, board);
+
+    board.empty_sand();
+    // add rock floor
+    board.get_painter().rock_wall((0,max.y+2).into(), (max.x<<1,max.y+2).into());
+    // run the sand simulation until grain settled position == starting position
+    board.run(
+        start, |g| g.pos.eq(&start)
+    );
+
+    println!("Scenario 2: Grains Rest: {}\n{:?}", board.grains_rest(), board);
+}
+
 fn parse_plines(input:&str) -> (Coord, Vec<Vec<Coord>>) {
     let mut max = Coord{ x:0, y:0 };
     let plines =
         input.lines()
-        .map(|line|{
-            line.split(&[',','-','>'])
-                .map(|p| p.trim())
-                .filter(|p| !p.is_empty() )
-                .map(|val| usize::from_str(val).expect("ops!"))
-                .collect::<Vec<_>>()
-        })
-        .map(|pline| {
-            pline
-                .chunks(2)
-                .map(|p| Coord{ x:p[0], y:p[1] })
-                .inspect(|p|{
-                    if max.x < p.x { max.x = p.x }
-                    if max.y < p.y { max.y = p.y }
-                })
-                .collect::<Vec<_>>()
-        })
-        .fold(vec![],|mut out, pline|{
-            out.push(pline);
-            out
-        });
+            .map(|line|{
+                line.split(&[',','-','>'])
+                    .map(|p| p.trim())
+                    .filter(|p| !p.is_empty() )
+                    .map(|val| usize::from_str(val).expect("ops!"))
+                    .collect::<Vec<_>>()
+            })
+            .map(|pline| {
+                pline
+                    .chunks(2)
+                    .map(|p| Coord{ x:p[0], y:p[1] })
+                    .inspect(|p|{
+                        if max.x < p.x { max.x = p.x }
+                        if max.y < p.y { max.y = p.y }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .fold(vec![],|mut out, pline|{
+                out.push(pline);
+                out
+            });
     (max, plines)
-}
-
-fn main() {
-
-    // let input = "498,4 -> 498,6 -> 496,6\n503,4 -> 502,4 -> 502,9 -> 494,9".to_string();
-    let input = std::fs::read_to_string("src/bin/day14_input.txt").expect("ops!");
-
-    let (max, plines) = parse_plines(input.as_str());
-    println!("Max {:?}",max);
-
-    let mut board: Board<Mat> = Board::new((max.x<<1)+1,max.y+2+1);
-    let painter = board.get_painter();
-
-    painter.rock_wall((0,max.y+2).into(), (max.x<<1,max.y+2).into());
-    plines
-        .into_iter()
-        .all(|pline| {
-            painter.rock_walls(&pline);
-            true
-        });
-
-    let pos = loop {
-        let mut pos = Coord { x: 500, y: 0 };
-        let mut grain = board.get_grain(pos);
-        // let the grain fall until moves no further
-        while let Some(p) = grain.move_one() { println!("{:?}",p); pos = p };
-        // cannot move anymore either (a) settled or (b) reached end of board
-        if !grain.is_settled() || pos.y == 0 {
-            println!("{:?}",pos);
-            *board.square_mut(pos).unwrap() = Mat::Sand;
-            break pos
-        }
-        *board.square_mut(pos).unwrap() = Mat::Sand;
-    };
-    println!("{:?} - {}\n{:?}", pos, board.grains_rest(), board);
 }
 
 struct Grain<'a> {
@@ -128,6 +129,31 @@ impl Board<Mat> {
         self.grid.iter()
             .filter(|&s| *s == Mat::Sand )
             .count()
+    }
+    fn empty_sand(&mut self) -> usize {
+        self.grid.iter_mut()
+            .filter(|s| **s == Mat::Sand )
+            .map(|s| *s = Mat::Air)
+            .count()
+    }
+    fn run<F>(&mut self, start: Coord, goal: F) where F: Fn(&Grain) -> bool {
+
+        loop {
+            let mut grain = self.get_grain(start);
+
+            // let the grain fall until it either (a) settles or (b) falls off the board
+            while let Some(_) = grain.move_one() {};
+
+            let pos = grain.pos;
+            // we have reached an end state, either
+            if goal(&grain) {
+                *self.square_mut(pos).unwrap() = Mat::Sand;
+                break
+            }
+
+            // Mark settled grain position on the board
+            *self.square_mut(pos).unwrap() = Mat::Sand;
+        }
     }
 }
 
