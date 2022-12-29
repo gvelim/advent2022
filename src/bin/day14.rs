@@ -10,14 +10,12 @@ fn main() {
     // parse the board's wall layout
     let (max, plines) = parse_plines(input.as_str());
 
-    let mut board: Board<Mat> = Board::new((max.x<<1)+1,max.y+2+1);
+    let mut board = Board::new((max.x<<1)+1,max.y+2+1);
 
     // paint layout on the board
-    let mut painter = board.new_painter();
-    plines
-        .into_iter()
+    plines.into_iter()
         .for_each(|pline|
-            painter.rock_walls(&pline)
+            Painter::rock_walls(&mut board, &pline)
         );
 
     // run the sand simulation until we reach the abyss, that is, grain stopped but not settled
@@ -25,17 +23,17 @@ fn main() {
     board.run(
         start, |g| !g.is_settled()
     );
-    println!("Scenario 1: Grains Rest: {}\n{:?}", board.grains_rest()-1, board);
+    println!("Scenario 1: Grains Rest: {}\n{:?}", board.grains_at_rest()-1, board);
 
     board.empty_sand();
     // add rock floor
-    board.new_painter().rock_wall((0, max.y+2).into(), (max.x<<1, max.y+2).into());
+    Painter::rock_wall(&mut board,(0, max.y+2).into(), (max.x<<1, max.y+2).into());
     // run the sand simulation until grain settled position == starting position
     board.run(
         start, |g| g.pos.eq(&start)
     );
 
-    println!("Scenario 2: Grains Rest: {}\n{:?}", board.grains_rest(), board);
+    println!("Scenario 2: Grains Rest: {}\n{:?}", board.grains_at_rest(), board);
 }
 
 fn parse_plines(input:&str) -> (Coord, Vec<Vec<Coord>>) {
@@ -58,14 +56,16 @@ fn parse_plines(input:&str) -> (Coord, Vec<Vec<Coord>>) {
     (max, plines)
 }
 
-struct Grain<'a> {
+struct Grain {
     pos: Coord,
-    settled: bool,
-    board: &'a Board<Mat>
+    settled: bool
 }
 
-impl Grain<'_> {
-    fn fall(&mut self) -> Option<Coord> {
+impl Grain {
+    fn release_grain(pos: Coord) -> Grain {
+        Grain { pos, settled: false }
+    }
+    fn fall(&mut self, board: &Board<Mat>) -> Option<Coord> {
 
         if self.settled { return None }
 
@@ -73,9 +73,9 @@ impl Grain<'_> {
 
         let [lc, uc, rc] = [(x-1, y+1).into(), (x, y+1).into(), (x+1, y+1).into()];
 
-        let l = self.board.square( lc );
-        let u = self.board.square( uc );
-        let r = self.board.square( rc );
+        let l = board.square( lc );
+        let u = board.square( uc );
+        let r = board.square( rc );
 
         match (l,u,r) {
             (_, None, _) => None,
@@ -96,15 +96,8 @@ enum Mat { Rock, Sand, Air }
 impl Default for Mat {
     fn default() -> Self { Mat::Air }
 }
-
 impl Board<Mat> {
-    fn new_painter(&mut self) -> Painter {
-        Painter { board: self }
-    }
-    fn release_grain(&mut self, pos: Coord) -> Grain {
-        Grain { pos, settled: false, board: self }
-    }
-    fn grains_rest(&self) -> usize {
+    fn grains_at_rest(&self) -> usize {
         self.grid.iter()
             .filter(|&s| *s == Mat::Sand )
             .count()
@@ -118,33 +111,30 @@ impl Board<Mat> {
     fn run<F>(&mut self, start: Coord, check_goal: F) where F: Fn(&Grain) -> bool {
 
         loop {
-            let mut grain = self.release_grain(start);
+            let mut grain = Grain::release_grain(start);
 
             // let the grain fall until it either (a) settles or (b) falls off the board
-            while let Some(_) = grain.fall() {};
+            while let Some(_) = grain.fall(&self) {};
 
-            let pos = grain.pos;
             // Have we reached an end state ?
                 // we use a closure that passes the stopped grain
                 // for checking whether (a) it has fallen in the abyss or (b) reached the starting position
             if check_goal(&grain) {
                 // Mark settled grain position on the board
-                *self.square_mut(pos).unwrap() = Mat::Sand;
+                *self.square_mut(grain.pos).unwrap() = Mat::Sand;
                 break
             }
 
             // Mark settled grain position on the board
-            *self.square_mut(pos).unwrap() = Mat::Sand;
+            *self.square_mut(grain.pos).unwrap() = Mat::Sand;
         }
     }
 }
 
-struct Painter<'a> {
-    board: &'a mut Board<Mat>
-}
+struct Painter();
 
-impl Painter<'_> {
-    fn rock_wall(&mut self, a: Coord, b: Coord) {
+impl Painter {
+    fn rock_wall(board: &mut Board<Mat>, a: Coord, b: Coord) {
         let x_range = if a.x <= b.x { a.x ..= b.x } else { b.x ..= a.x };
         x_range
             .flat_map(|x| {
@@ -152,13 +142,13 @@ impl Painter<'_> {
                 y_range.map(move |y| (x, y).into())
             })
             .for_each(|p|
-                *self.board.square_mut(p).unwrap() = Mat::Rock
+                *board.square_mut(p).unwrap() = Mat::Rock
             );
     }
-    fn rock_walls(&mut self, c: &[Coord]) {
+    fn rock_walls(board: &mut Board<Mat>, c: &[Coord]) {
         c.windows(2)
             .for_each(| p|
-                self.rock_wall(p[0], p[1])
+                Painter::rock_wall(board,p[0], p[1])
             );
     }
 }
