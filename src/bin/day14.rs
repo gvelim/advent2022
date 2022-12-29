@@ -27,7 +27,7 @@ fn main() {
     );
     println!("Scenario 1: Grains Rest: {}\n{:?}", board.grains_rest()-1, board);
 
-    board.reset();
+    board.empty_sand();
     // add rock floor
     board.new_painter().rock_wall((0, max.y+2).into(), (max.x<<1, max.y+2).into());
     // run the sand simulation until grain settled position == starting position
@@ -109,7 +109,7 @@ impl Board<Mat> {
             .filter(|&s| *s == Mat::Sand )
             .count()
     }
-    fn reset(&mut self) -> usize {
+    fn empty_sand(&mut self) -> usize {
         self.grid.iter_mut()
             .filter(|s| **s == Mat::Sand )
             .map(|s| *s = Mat::Air)
