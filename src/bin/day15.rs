@@ -3,32 +3,27 @@ use std::fmt::{Debug, Formatter};
 use std::ops::RangeInclusive;
 use std::str::FromStr;
 
-// const INPUT : &str = "Sensor at x=2, y=18: closest beacon is at x=-2, y=15
-// Sensor at x=9, y=16: closest beacon is at x=10, y=16
-// Sensor at x=13, y=2: closest beacon is at x=15, y=3
-// Sensor at x=12, y=14: closest beacon is at x=10, y=16
-// Sensor at x=10, y=20: closest beacon is at x=10, y=16
-// Sensor at x=14, y=17: closest beacon is at x=10, y=16
-// Sensor at x=8, y=7: closest beacon is at x=2, y=10
-// Sensor at x=2, y=0: closest beacon is at x=2, y=10
-// Sensor at x=0, y=11: closest beacon is at x=2, y=10
-// Sensor at x=20, y=14: closest beacon is at x=25, y=17
-// Sensor at x=17, y=20: closest beacon is at x=21, y=22
-// Sensor at x=16, y=7: closest beacon is at x=15, y=3
-// Sensor at x=14, y=3: closest beacon is at x=15, y=3
-// Sensor at x=20, y=1: closest beacon is at x=15, y=3";
+const INPUT : &str = "Sensor at x=2, y=18: closest beacon is at x=-2, y=15
+Sensor at x=9, y=16: closest beacon is at x=10, y=16
+Sensor at x=13, y=2: closest beacon is at x=15, y=3
+Sensor at x=12, y=14: closest beacon is at x=10, y=16
+Sensor at x=10, y=20: closest beacon is at x=10, y=16
+Sensor at x=14, y=17: closest beacon is at x=10, y=16
+Sensor at x=8, y=7: closest beacon is at x=2, y=10
+Sensor at x=2, y=0: closest beacon is at x=2, y=10
+Sensor at x=0, y=11: closest beacon is at x=2, y=10
+Sensor at x=20, y=14: closest beacon is at x=25, y=17
+Sensor at x=17, y=20: closest beacon is at x=21, y=22
+Sensor at x=16, y=7: closest beacon is at x=15, y=3
+Sensor at x=14, y=3: closest beacon is at x=15, y=3
+Sensor at x=20, y=1: closest beacon is at x=15, y=3";
 
-fn main() {
-    let input = std::fs::read_to_string("src/bin/day15_input.txt").expect("Ops!");
-
-    let area = Area::deploy_sensors(input.as_str());
+fn component_1(input:&str) {
+    let area = Area::deploy_sensors(input);
     let line = 2000000;
 
-    let ranges = area.sensor_coverage_at(line);
-    println!("{:?}",ranges);
-    let res = Area::merge_ranges(ranges);
+    let res = area.sensor_coverage_at(line);
     println!("Signal Coverage @{line} = {:?}",res);
-
     let beacons = area.beacons_at(line);
     println!("Beacons = {:?}",beacons);
 
@@ -36,6 +31,23 @@ fn main() {
         .map(|r| r.count())
         .sum::<usize>();
     println!("{}-{}={} (4793062)", positions,beacons.len(),positions-beacons.len());
+}
+
+fn main() {
+    let input = std::fs::read_to_string("src/bin/day15_input.txt").expect("Ops!");
+
+    component_1(input.as_str());
+
+    let area = Area::deploy_sensors(input.as_str());
+    (0..=4000000).map(|line| (line,area.sensor_coverage_at(line)))
+        .filter(|(_,v)| v.len() > 1 )
+        .any(|(line,v)|{
+            if v[1].start()-v[0].end() > 1 {
+                let total = (v[0].end() + 1) * 4000000 + line;
+                println!("Signal Coverage @{line} = {:?} \nFreq of distress beacon: {total}", v);
+                false
+            } else { true }
+    });
 }
 
 struct Area {
