@@ -18,36 +18,31 @@ Sensor at x=16, y=7: closest beacon is at x=15, y=3
 Sensor at x=14, y=3: closest beacon is at x=15, y=3
 Sensor at x=20, y=1: closest beacon is at x=15, y=3";
 
-fn component_1(input:&str) {
-    let area = Area::deploy_sensors(input);
-    let line = 2000000;
+fn main() {
+    let input = std::fs::read_to_string("src/bin/day15_input.txt").expect("Ops!");
 
-    let res = area.sensor_coverage_at(line);
-    println!("Signal Coverage @{line} = {:?}",res);
-    let beacons = area.beacons_at(line);
+    let area = Area::deploy_sensors(input.as_str());
+
+    // Component 1
+    let res = area.sensor_coverage_at(2000000);
+    println!("Signal Coverage @2000000 = {:?}",res);
+    let beacons = area.beacons_at(2000000);
     println!("Beacons = {:?}",beacons);
 
     let positions = res.into_iter()
         .map(|r| r.count())
         .sum::<usize>();
     println!("{}-{}={} (4793062)", positions,beacons.len(),positions-beacons.len());
-}
 
-fn main() {
-    let input = std::fs::read_to_string("src/bin/day15_input.txt").expect("Ops!");
-
-    component_1(input.as_str());
-
-    let area = Area::deploy_sensors(input.as_str());
-    (0..=4000000).map(|line| (line,area.sensor_coverage_at(line)))
+    // Component 2
+    let (line, v) = (0..=4000000)
+        .map(|line| (line,area.sensor_coverage_at(line)))
         .filter(|(_,v)| v.len() > 1 )
-        .any(|(line,v)|{
-            if v[1].start()-v[0].end() > 1 {
-                let total = (v[0].end() + 1) * 4000000 + line;
-                println!("Signal Coverage @{line} = {:?} \nFreq of distress beacon: {total}", v);
-                false
-            } else { true }
-    });
+        .filter(|(_,v)| v[1].start() - v[0].end() > 1 )
+        .next().unwrap();
+
+    let total = (v[0].end() + 1) * 4000000 + line;
+    println!("Signal Coverage @{line} = {:?} \nFreq of distress beacon: {total}", v);
 }
 
 struct Area {
@@ -97,8 +92,8 @@ impl Area {
 
         if let Some(last) = ranges.into_iter()
             .reduce(|a, b|
-                if a.contains(b.start()) {
-                    if !a.contains(b.end()) {
+                if a.end() >= &(b.start()-1) {
+                    if a.end() < b.end() {
                         *a.start()..=*b.end()
                     } else { a }
                 } else {
