@@ -114,7 +114,7 @@ impl Board<Mat> {
             let mut grain = Grain::release_grain(start);
 
             // let the grain fall until it either (a) settles or (b) falls off the board
-            while let Some(_) = grain.fall(&self) {};
+            while grain.fall(self).is_some() {};
 
             // Have we reached an end state ?
                 // we use a closure that passes the stopped grain
