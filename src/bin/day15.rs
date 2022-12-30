@@ -18,12 +18,48 @@ Sensor at x=14, y=3: closest beacon is at x=15, y=3
 Sensor at x=20, y=1: closest beacon is at x=15, y=3";
 
 fn main() {
+    // let input = std::fs::read_to_string("src/bin/day15_input.txt").expect("Ops!");
+
     let sensors = Sensor::parse(input);
 
-    sensors.iter()
-        .filter_map(|sensor| sensor.signal_at(10))
-        .inspect(|e| println!("{:?}",e))
-        .all(|l| true);
+    let mut ranges = sensors.iter()
+        .filter_map(|sensor| sensor.signal_at(11))
+        .fold(vec![],|mut out, r|{
+            out.push(r);
+            out
+        });
+
+    println!("{:?}",ranges);
+    let res = merge_ranges(ranges);
+
+    println!("{:?}",res);
+    let positions = res.into_iter()
+        .map(|r| r.count())
+        .sum::<usize>();
+    println!("{positions}");
+
+}
+
+fn merge_ranges(mut ranges: Vec<RangeInclusive<isize>>) -> Vec<RangeInclusive<isize>>{
+    let mut out = vec![];
+
+    ranges.sort_by_key(|a| *a.start() );
+
+    let last = ranges.into_iter()
+        .reduce(|a,b|
+            if a.contains(b.start()) {
+                if !a.contains(b.end()) {
+                    (*a.start()..= *b.end())
+                } else { a }
+            } else {
+                // We got a range gap here hence we must save range A
+                // while we pass on Range B to the next iteration
+                out.push(a);
+                b
+            }
+        ).unwrap();
+    out.push(last);
+    out
 }
 
 struct Sensor {
