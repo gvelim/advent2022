@@ -66,27 +66,19 @@ impl Area {
                         dist: comb[0].abs_diff(comb[2]) + comb[1].abs_diff(comb[3])
                     }
                 )
-                .fold( vec![], |mut out, sensor| {
-                    out.push(sensor);
-                    out
-                })
+                .collect::<Vec<_>>()
         }
     }
     fn beacons_at(&self, line:isize) -> HashSet<Coord> {
         self.sensors.iter().filter_map(|s| if s.beacon.y == line { Some(s.beacon)} else {None}).collect::<HashSet<_>>()
     }
     fn sensor_coverage_at(&self, line: isize) -> Vec<RangeInclusive<isize>> {
-        Area::merge_ranges(
-            self.sensors.iter()
-                .filter_map(|sensor| sensor.coverage_at(line))
-                .fold(vec![], |mut out, r| {
-                    out.push(r);
-                    out
-                })
-        )
-    }
-    fn merge_ranges(mut ranges: Vec<RangeInclusive<isize>>) -> Vec<RangeInclusive<isize>> {
+
         let mut result = vec![];
+
+        let mut ranges = self.sensors.iter()
+                .filter_map(|sensor| sensor.coverage_at(line))
+                .collect::<Vec<_>>();
 
         ranges.sort_by_key(|a| *a.start());
 
@@ -119,13 +111,13 @@ impl Sensor {
     fn coverage_at(&self, d: isize) -> Option<RangeInclusive<isize>> {
         let Coord{x,y} = self.pos;
         let diff = y.abs_diff(d);
-        match diff {
-            n if n <= self.dist =>
-                Some(RangeInclusive::new(
-                    x.saturating_sub_unsigned(self.dist - diff),
-                    x.saturating_add_unsigned(self.dist - diff))
-                ),
-            _ => None
+        if diff <= self.dist {
+            Some(RangeInclusive::new(
+                x.saturating_sub_unsigned(self.dist - diff),
+                x.saturating_add_unsigned(self.dist - diff))
+            )
+        } else {
+            None
         }
     }
 }
