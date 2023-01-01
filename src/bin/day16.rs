@@ -16,14 +16,51 @@ fn main() {
     let volcano = Volcano::parse(INPUT);
     println!("Graph: {:?}",volcano.graph);
     println!("FlowMap: {:?}",volcano.flow);
+
+    let mut dfs = DFS::new(&volcano);
+    println!("DFS: {:?}",dfs);
+    let path = dfs.find_path(&volcano,"AA");
+    println!("DFS: {:?}",path);
+    let sum = dfs.path.into_iter()
+        .reduce(|a,b| (b.0, a.1+b.1)  ).unwrap();
+    println!("DFS: {:?}",sum);
 }
 
-struct Volcano<'a> {
-    graph: HashMap<&'a str,Vec<&'a str>>,
-    flow: HashMap<&'a str, usize>
+#[derive(Debug)]
+struct DFS {
+    visited: HashMap<String,bool>,
+    path: Vec<(String,usize)>
+}
+impl DFS {
+    fn new(volcano: &Volcano) -> DFS {
+        DFS {
+            visited: volcano.flow.iter().map(|(key,_)| (key.clone(),false)).collect(),
+            path: vec![]
+        }
+    }
+    fn find_path(&mut self, vol:&Volcano, start:&str) -> &Vec<(String,usize)> {
+        let s = start.to_string();
+        *self.visited.get_mut(&s).unwrap() = true;
+
+        if let Some(pipes) = vol.graph.get(s.as_str()) {
+            for pipe in pipes {
+                if !self.visited[pipe] {
+                    self.find_path(vol,pipe);
+                }
+            }
+        }
+        let flow = vol.flow[&s];
+        self.path.push((s,flow));
+        &self.path
+    }
 }
 
-impl Volcano<'_> {
+struct Volcano {
+    graph: HashMap<String,Vec<String>>,
+    flow: HashMap<String, usize>
+}
+
+impl Volcano {
     fn parse(input: &str) -> Volcano {
         let (graph, flow) = input.lines()
             .map(|line| {
@@ -33,12 +70,12 @@ impl Volcano<'_> {
             })
             .map(|s| (s[1],s[5],s[10..].to_vec()))
             .fold( (HashMap::new(),HashMap::new()),|(mut g, mut f),(key, flow, edges)| {
-                f.entry(key).or_insert(usize::from_str(flow).expect("Cannot convert flow"));
+                f.entry(key.to_string()).or_insert(usize::from_str(flow).expect("Cannot convert flow"));
                 edges.into_iter()
                     .for_each(|edge|
-                        g.entry(key)
+                        g.entry(key.to_string())
                             .or_insert(Vec::new())
-                            .push(edge)
+                            .push(edge.to_string())
                     );
                 (g,f)
             });
