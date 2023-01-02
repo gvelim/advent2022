@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::{HashMap, VecDeque};
 use std::str::FromStr;
 
@@ -14,34 +15,51 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
 
 fn main() {
     let mut volcano = Volcano::parse(INPUT);
-    println!("Graph: {:?}",volcano.graph);
-    println!("FlowMap: {:?}",volcano.flow);
 
     let mut queue = VecDeque::new();
-    queue.push_back("AA".to_string());
+    let mut combination = vec!["CC", "EE", "HH", "JJ", "BB", "DD", "AA"];
+
+    queue.push_back(combination.pop().unwrap().to_string());
+
+    let mut budget = 30;
+    let mut pressure = 0;
 
     while let Some(valve) = queue.pop_front() {
 
-        volcano.flow.get_mut(&valve).unwrap().1 = true;
+        volcano.flow.get_mut(&valve).unwrap().open = true;
 
         let mut options = volcano.flow.iter()
-            .filter(|&(_,&(bar,open))| bar > 0  && !open )
-            .filter_map(|(target,data)|
-                Some((BFS::find_path(&volcano, &valve, target),data))
+            .filter(|&(_,valve)| valve.pressure > 0  && !valve.open )
+            .map(|(target,_)|
+                BFS::find_path(&volcano, &valve, target)
             )
-            .inspect(|(path,_)| print!("Path: {:?}",path) )
-            .fold(vec![],|mut out, (path,&(flow,_))|{
-                let value = flow / (path.len()+1);
-                println!(" = Pressure:{}, Cost:{} Value: {:?}",flow,path.len()+1,value);
-                out.push((path[0].clone(),value));
-                out
-            });
-        options.sort_by_key(|a| a.1 );
-        if let Some(option) = options.pop() {
-            println!("====> Options {:?} ==> Option: {:?}",options,option);
-            queue.push_back(option.0.clone());
+            .map(|path|
+                (path[0].clone(), path.len(), volcano.flow[&path[0]].pressure/(path.len()))
+            )
+            .inspect(|(target, time, value)|
+                println!("\tPressure:{}, Cost:{} Value: {:?} = {:?}", volcano.flow[target].pressure, time, value, target)
+            )
+            .collect::<Vec<_>>();
+
+        options.sort_by(|a,b|
+            match a.2.cmp(&b.2) {
+                res@
+                (Ordering::Less | Ordering::Greater) => res,
+                Ordering::Equal => b.1.cmp(&a.1)
+            }
+        );
+
+         // let Some(next) = combination.pop() else { continue };
+         // if let Some(&(ref valve,cost,value)) = options.iter().find(|(s,_,_)| s.eq(next) ) {
+
+       if let Some((valve,cost,value)) = options.pop() {
+            budget -= cost;
+            pressure += volcano.flow[&valve].pressure * budget;
+            println!("====> Option {:?} out of Options: {:?}",(&valve,cost,value,budget,pressure),options);
+            queue.push_back(valve);
         }
     }
+    println!("Pressure: {}",pressure);
 }
 
 #[derive(Debug)]
@@ -79,9 +97,16 @@ impl BFS {
     }
 }
 
+#[derive(Debug)]
+struct Valve {
+    name: String,
+    pressure: usize,
+    open: bool
+}
+
 struct Volcano {
     graph: HashMap<String,Vec<String>>,
-    flow: HashMap<String, (usize,bool)>
+    flow: HashMap<String, Valve>
 }
 
 impl Volcano {
@@ -95,7 +120,11 @@ impl Volcano {
             .map(|s| (s[1],s[5],s[10..].to_vec()))
             .fold( (HashMap::new(),HashMap::new()),|(mut g, mut f),(key, flow, edges)| {
                 f.entry(key.to_string()).or_insert(
-                    (usize::from_str(flow).expect("Cannot convert flow"),false)
+                    Valve {
+                        name: key.to_string(),
+                        pressure: usize::from_str(flow).expect("Cannot convert flow"),
+                        open: false
+                    }
                 );
                 edges.into_iter()
                     .for_each(|edge|
