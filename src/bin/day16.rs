@@ -1,4 +1,4 @@
-use std::collections::{HashMap};
+use std::collections::{HashMap, VecDeque};
 use std::str::FromStr;
 
 const INPUT: &str = "Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
@@ -13,51 +13,66 @@ Valve II has flow rate=0; tunnels lead to valves AA, JJ
 Valve JJ has flow rate=21; tunnel leads to valve II";
 
 fn main() {
-    let volcano = Volcano::parse(INPUT);
+    let mut volcano = Volcano::parse(INPUT);
     println!("Graph: {:?}",volcano.graph);
     println!("FlowMap: {:?}",volcano.flow);
 
-    let mut dfs = DFS::new(&volcano);
-    println!("DFS: {:?}",dfs);
-    let path = dfs.find_path(&volcano,"AA");
-    println!("DFS: {:?}",path);
-    let sum = dfs.path.into_iter()
-        .reduce(|a,b| (b.0, a.1+b.1)  ).unwrap();
-    println!("DFS: {:?}",sum);
+    let mut queue = VecDeque::new();
+    queue.push_back("AA".to_string());
+
+    while let Some(valve) = queue.pop_front() {
+
+        volcano.flow.get_mut(&valve).unwrap().1 = true;
+
+        volcano.flow.iter()
+            .filter(|&(_,&(bar,open))| bar > 0  && !open )
+            .for_each(|v|{
+                let path = BFS::find_path(&volcano, &valve, v.0);
+                print!("Path to {:?}: {:?}",v.0,path);
+                let cost = volcano.flow[v.0].0 / (path.len()+1);
+                println!(" = Pressure:{}, Cost:{} Value: {:?}",volcano.flow[v.0].0,path.len()+1,cost);
+            })
+    }
 }
 
 #[derive(Debug)]
-struct DFS {
-    visited: HashMap<String,bool>,
-    path: Vec<(String,usize)>
-}
-impl DFS {
-    fn new(volcano: &Volcano) -> DFS {
-        DFS {
-            visited: volcano.flow.iter().map(|(key,_)| (key.clone(),false)).collect(),
-            path: vec![]
-        }
-    }
-    fn find_path(&mut self, vol:&Volcano, start:&str) -> &Vec<(String,usize)> {
-        let s = start.to_string();
-        *self.visited.get_mut(&s).unwrap() = true;
+struct BFS();
+impl BFS {
+    fn find_path(vol:&Volcano, start:&String, end:&String) -> Vec<String> {
+        let mut queue = VecDeque::new();
+        let mut state: HashMap<String,(bool,Option<String>)> =
+            vol.flow.iter()
+                .map(|(key,_)| (key.clone(), (false, None)))
+                .collect::<HashMap<_,_>>();
+        let mut path = vec![];
 
-        if let Some(pipes) = vol.graph.get(s.as_str()) {
-            for pipe in pipes {
-                if !self.visited[pipe] {
-                    self.find_path(vol,pipe);
+        queue.push_back(start);
+        while let Some(valve) = queue.pop_front() {
+
+            if valve.eq(end) {
+                path.push(valve.clone());
+                let mut cur = valve.clone();
+                while let Some(par) = state[&cur].1.clone() {
+                    path.push(par.clone());
+                    cur = par;
+                }
+                break
+            }
+            state.get_mut(valve).unwrap().0 = true;
+            for v in &vol.graph[valve] {
+                if !state[v].0 {
+                    state.get_mut(v).unwrap().1 = Some(valve.clone());
+                    queue.push_back(v)
                 }
             }
         }
-        let flow = vol.flow[&s];
-        self.path.push((s,flow));
-        &self.path
+        path
     }
 }
 
 struct Volcano {
     graph: HashMap<String,Vec<String>>,
-    flow: HashMap<String, usize>
+    flow: HashMap<String, (usize,bool)>
 }
 
 impl Volcano {
@@ -70,7 +85,9 @@ impl Volcano {
             })
             .map(|s| (s[1],s[5],s[10..].to_vec()))
             .fold( (HashMap::new(),HashMap::new()),|(mut g, mut f),(key, flow, edges)| {
-                f.entry(key.to_string()).or_insert(usize::from_str(flow).expect("Cannot convert flow"));
+                f.entry(key.to_string()).or_insert(
+                    (usize::from_str(flow).expect("Cannot convert flow"),false)
+                );
                 edges.into_iter()
                     .for_each(|edge|
                         g.entry(key.to_string())
