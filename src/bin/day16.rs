@@ -24,14 +24,23 @@ fn main() {
 
         volcano.flow.get_mut(&valve).unwrap().1 = true;
 
-        volcano.flow.iter()
+        let mut options = volcano.flow.iter()
             .filter(|&(_,&(bar,open))| bar > 0  && !open )
-            .for_each(|v|{
-                let path = BFS::find_path(&volcano, &valve, v.0);
-                print!("Path to {:?}: {:?}",v.0,path);
-                let cost = volcano.flow[v.0].0 / (path.len()+1);
-                println!(" = Pressure:{}, Cost:{} Value: {:?}",volcano.flow[v.0].0,path.len()+1,cost);
-            })
+            .filter_map(|(target,data)|
+                Some((BFS::find_path(&volcano, &valve, target),data))
+            )
+            .inspect(|(path,_)| print!("Path: {:?}",path) )
+            .fold(vec![],|mut out, (path,&(flow,_))|{
+                let value = flow / (path.len()+1);
+                println!(" = Pressure:{}, Cost:{} Value: {:?}",flow,path.len()+1,value);
+                out.push((path[0].clone(),value));
+                out
+            });
+        options.sort_by_key(|a| a.1 );
+        if let Some(option) = options.pop() {
+            println!("====> Options {:?} ==> Option: {:?}",options,option);
+            queue.push_back(option.0.clone());
+        }
     }
 }
 
