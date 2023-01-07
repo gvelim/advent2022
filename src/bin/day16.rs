@@ -13,32 +13,66 @@ Valve HH has flow rate=22; tunnel leads to valve GG
 Valve II has flow rate=0; tunnels lead to valves AA, JJ
 Valve JJ has flow rate=21; tunnel leads to valve II";
 
+
 fn main() {
-    let mut volcano = Volcano::parse(INPUT);
+    let volcano = Volcano::parse(INPUT);
+    println!("Pressure: {}", greedy_search(&volcano,"AA") );
+    println!("Pressure: {}", path_pressure(&volcano, &["AA", "DD", "BB", "JJ", "HH", "EE", "CC"]) );
 
+    // create all path combinations starting from AA
+
+    // per path calculate total pressure released and select the max of all paths
+}
+
+fn path_pressure(volcano:&Volcano, combinations: &[&str]) -> usize {
+
+    let mut time_left = 30;
+
+    combinations
+        .windows(2)
+        .map_while(|valves| {
+            let target = valves[1].to_string();
+            let path = BFS::find_path(&volcano, &valves[0].to_string(), &target);
+            if time_left < path.len() {
+                None
+            } else {
+                time_left -= path.len(); // = len-1 steps + open valve
+                let total_pressure_released = volcano.flow[&target].pressure * time_left;
+                println!("====> Time {time_left}, {:?}", (&target, path.len(), total_pressure_released));
+                Some(total_pressure_released)
+            }
+        })
+        .sum::<usize>()
+}
+
+fn greedy_search(volcano:&Volcano, start: &str) -> usize {
     let mut queue = VecDeque::new();
-    let mut combination = vec!["CC", "EE", "HH", "JJ", "BB", "DD", "AA"];
+    // let mut combination = vec!["CC", "EE", "HH", "JJ", "BB", "DD", "AA"];
+    let mut flow = volcano.flow.iter()
+        .map(|(key,valve)| (key.clone(), valve.clone()))
+        .collect::<HashMap<_,_>>();
 
-    queue.push_back(combination.pop().unwrap().to_string());
+    queue.push_back(start.to_string());
 
     let mut budget = 30;
     let mut pressure = 0;
 
     while let Some(valve) = queue.pop_front() {
 
-        volcano.flow.get_mut(&valve).unwrap().open = true;
+        flow.get_mut(&valve).unwrap().open = true;
 
-        let mut options = volcano.flow.iter()
+        let mut options = flow.iter()
             .filter(|&(_,valve)| valve.pressure > 0  && !valve.open )
             .map(|(target,_)|
-                BFS::find_path(&volcano, &valve, target)
+                BFS::find_path(&volcano, &valve, &target)
             )
+            // .inspect(|path| print!("\t {:?}",path))
             .map(|path|
                 (path[0].clone(), path.len(), volcano.flow[&path[0]].pressure/(path.len()))
             )
-            .inspect(|(target, time, value)|
-                println!("\tPressure:{}, Cost:{} Value: {:?} = {:?}", volcano.flow[target].pressure, time, value, target)
-            )
+            // .inspect(|(target, time, value)|
+            //     println!("\tPressure:{}, Cost:{} Value: {:?} = {:?}", volcano.flow[target].pressure, time, value, target)
+            // )
             .collect::<Vec<_>>();
 
         options.sort_by(|a,b|
@@ -49,17 +83,17 @@ fn main() {
             }
         );
 
-         // let Some(next) = combination.pop() else { continue };
-         // if let Some(&(ref valve,cost,value)) = options.iter().find(|(s,_,_)| s.eq(next) ) {
+        // let Some(next) = combination.pop() else { continue };
+        // if let Some(&(ref valve,cost,value)) = options.iter().find(|(s,_,_)| s.eq(next) ) {
 
-       if let Some((valve,cost,value)) = options.pop() {
+        if let Some((valve,cost,value)) = options.pop() {
             budget -= cost;
             pressure += volcano.flow[&valve].pressure * budget;
-            println!("====> Option {:?} out of Options: {:?}",(&valve,cost,value,budget,pressure),options);
+            println!("====> Time: {budget} got for Option {:?} out of Options: {:?}",(&valve,cost,value,budget,pressure),options);
             queue.push_back(valve);
         }
     }
-    println!("Pressure: {}",pressure);
+    pressure
 }
 
 #[derive(Debug)]
@@ -97,9 +131,8 @@ impl BFS {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 struct Valve {
-    name: String,
     pressure: usize,
     open: bool
 }
@@ -121,7 +154,6 @@ impl Volcano {
             .fold( (HashMap::new(),HashMap::new()),|(mut g, mut f),(key, flow, edges)| {
                 f.entry(key.to_string()).or_insert(
                     Valve {
-                        name: key.to_string(),
                         pressure: usize::from_str(flow).expect("Cannot convert flow"),
                         open: false
                     }
