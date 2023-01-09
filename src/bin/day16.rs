@@ -61,12 +61,12 @@ fn main() {
             out
         });
     println!("Valves: {:?}", valves );
-    let max = greedy_search(&net, "AA");
+    let (max,solution) = greedy_search(&net, start);
     println!("Pressure (Greedy): {}", max );
 
     // create all valve visit order combinations
-    let mut comb = Combinations{ path: vec![], solution: vec![], max };
-    comb.combinations(&net,&valves);
+    let mut comb = Combinations{ path: vec![], solution: vec![], max: 0 };
+    comb.combinations(&net,&solution);
 
     println!("Solutions: {:?}\nMax flow {:?}", comb.solution, comb.max)
 }
@@ -92,12 +92,13 @@ fn path_pressure(volcano:&ValveNet, combinations: &[&str]) -> usize {
         .sum::<usize>()
 }
 
-fn greedy_search(net:&ValveNet, start: &str) -> usize {
+fn greedy_search<'a>(net:&'a ValveNet, start: &'a str) -> (usize,Vec<&'a str>) {
     let mut queue = VecDeque::new();
     // let mut combination = vec!["CC", "EE", "HH", "JJ", "BB", "DD", "AA"];
     let mut flow = net.flow.iter()
-        .map(|(key,valve)| (key.clone(), valve.clone()))
+        .map(|(key,valve)| (key, valve.clone()))
         .collect::<HashMap<_,_>>();
+    let mut path = vec![start];
 
     queue.push_back(start);
 
@@ -115,7 +116,7 @@ fn greedy_search(net:&ValveNet, start: &str) -> usize {
             )
             // .inspect(|path| print!("\t {:?}",path))
             .map(|path|
-                (path[0].clone(), path.len(), net.flow[&path[0]].pressure/(path.len()))
+                (path[0], path.len(), net.flow[&path[0]].pressure/(path.len()))
             )
             // .inspect(|(target, time, value)|
             //     println!("\tPressure:{}, Cost:{} Value: {:?} = {:?}", volcano.flow[target].pressure, time, value, target)
@@ -134,14 +135,18 @@ fn greedy_search(net:&ValveNet, start: &str) -> usize {
         // if let Some(&(ref valve,cost,value)) = options.iter().find(|(s,_,_)| s.eq(next) ) {
 
         if let Some((valve,cost,value)) = options.pop() {
-            if budget < cost { return pressure }
+            path.push(valve);
+            if budget < cost {
+                path.extend(options.iter().map(|&(v,..)| v));
+                return (pressure,path)
+            }
             budget -= cost;
             pressure += net.flow[&valve].pressure * budget;
             println!("====> Time: {budget} got for Option {:?} out of Options: {:?}",(&valve,cost,value,budget,pressure),options);
             queue.push_back(valve);
         }
     }
-    pressure
+    (pressure,path)
 }
 
 #[derive(Debug)]
@@ -159,10 +164,10 @@ impl BFS {
         while let Some(valve) = queue.pop_front() {
 
             if valve.eq(end) {
-                path.push(valve.clone());
-                let mut cur = valve.clone();
-                while let Some(par) = state[&cur].1.clone() {
-                    path.push(par.clone());
+                path.push(valve);
+                let mut cur = valve;
+                while let Some(par) = state[&cur].1 {
+                    path.push(par);
                     cur = par;
                 }
                 break
@@ -170,7 +175,7 @@ impl BFS {
             state.get_mut(valve).unwrap().0 = true;
             for v in &vol.graph[valve] {
                 if !state[v].0 {
-                    state.get_mut(v).unwrap().1 = Some(valve.clone());
+                    state.get_mut(v).unwrap().1 = Some(valve);
                     queue.push_back(v)
                 }
             }
