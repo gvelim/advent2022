@@ -1,7 +1,7 @@
 extern crate core;
 
 use std::cmp::Ordering;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use std::str::FromStr;
 
@@ -21,7 +21,7 @@ fn main() {
 
     struct Combinations<'a> {
         path: Vec<&'a str>,
-        combos: Vec<Vec<&'a str>>
+        solutions: HashSet<Vec<&'a str>>
     }
     impl<'a> Combinations<'a> {
         fn combinations(&mut self, valves: &[&'a str]) -> &Vec<&str> {
@@ -30,7 +30,7 @@ fn main() {
 
             if valves.len() == 1 {
                 // ok we got potential solution, store it
-                self.combos.push(self.path.clone());
+                self.solutions.insert(self.path.clone());
                 self.path.pop();
                 return &self.path;
             }
@@ -55,21 +55,20 @@ fn main() {
             out.push(name.as_str());
             out
         });
-    // let valves = ["AA", "DD", "BB", "JJ", "HH", "EE", "CC"];
     println!("Valves: {:?}", valves );
     println!("Pressure: {}", greedy_search(&net, "AA") );
 
     // create all valve visit order combinations
-    let mut comb = Combinations{ path: vec![], combos: vec![] };
+    let mut comb = Combinations{ path: vec![], solutions: HashSet::new() };
     comb.combinations(&valves);
 
     // per path calculate total pressure released and select the max of all paths
-    let max = comb.combos.iter()
+    let max = comb.solutions.iter()
         .map(|path|
             (path_pressure(&net, path.as_slice()), path)
         )
         .max_by(|a,b| a.0.cmp(&b.0) );
-    println!("Solutions: {}\nMax flow {:?}",comb.combos.len(),max)
+    println!("Solutions: {}\nMax flow {:?}", comb.solutions.len(), max)
 }
 
 fn path_pressure(volcano:&ValveNet, combinations: &[&str]) -> usize {
