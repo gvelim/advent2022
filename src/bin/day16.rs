@@ -48,7 +48,15 @@ fn main() {
     }
 
     let net = ValveNet::parse(INPUT);
-    let valves = ["AA", "DD", "BB", "JJ", "HH", "EE", "CC"];
+    let start = "AA";
+    let valves = net.flow.iter()
+        .filter(|(_, v)| v.pressure > 0 )
+        .fold( vec![start],|mut out, (name, _)| {
+            out.push(name.as_str());
+            out
+        });
+    // let valves = ["AA", "DD", "BB", "JJ", "HH", "EE", "CC"];
+    println!("Valves: {:?}", valves );
     println!("Pressure: {}", greedy_search(&net, "AA") );
 
     // create all valve visit order combinations
