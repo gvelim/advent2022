@@ -20,7 +20,7 @@ const BUDGET:usize = 30;
 fn main() {
 
     let input = std::fs::read_to_string("src/bin/day16_input.txt").expect("ops!");
-    let mut net = ValveNet::parse(INPUT);
+    let mut net = ValveNet::parse(input.as_str());
 
     let start = "AA";
     let valves = net.flow.iter()
@@ -41,6 +41,40 @@ fn main() {
     println!("Solutions: {:?}\nMax flow {:?}", comb.solution, comb.max)
 }
 
+struct ValveBacktrack<'a> {
+    net: &'a ValveNet<'a>,
+    path: Vec<&'a str>,
+    solution: Vec<&'a str>,
+    max: usize
+}
+
+impl<'a> ValveBacktrack<'a> {
+    fn combinations(&mut self, valves: &[&'a str]) {
+
+        self.path.push(valves[0]);
+
+        if valves.len() == 1 {
+            // ok we got potential solution, store it
+            let pressure = self.net.path_pressure(BUDGET, &self.path);
+            if pressure > self.max {
+                println!("Found {},{:?}",pressure,self.path);
+                self.max = pressure;
+                self.solution = self.path.clone();
+            }
+            self.path.pop();
+            return;
+        }
+
+        let mut tmp = valves[1..].to_vec();
+        (0..valves[1..].len())
+            .for_each(|i|{
+                tmp.swap(0,i);
+                self.combinations(tmp.as_slice());
+            });
+
+        self.path.pop();
+    }
+}
 
 struct Cache<'a> {
     cache: Cell<HashMap<(&'a str,&'a str),usize>>
@@ -76,40 +110,6 @@ impl<'a> Cache<'a> {
     }
 }
 
-struct ValveBacktrack<'a> {
-    net: &'a ValveNet<'a>,
-    path: Vec<&'a str>,
-    solution: Vec<&'a str>,
-    max: usize
-}
-impl<'a> ValveBacktrack<'a> {
-    fn combinations(&mut self, valves: &[&'a str]) {
-
-        self.path.push(valves[0]);
-
-        if valves.len() == 1 {
-            // ok we got potential solution, store it
-            let pressure = self.net.path_pressure(BUDGET, &self.path);
-            if pressure > self.max {
-                println!("Found {},{:?}",pressure,self.path);
-                self.max = pressure;
-                self.solution = self.path.clone();
-            }
-            self.path.pop();
-            return;
-        }
-
-        let mut tmp = valves[1..].to_vec();
-        (0..valves[1..].len())
-            .for_each(|i|{
-                tmp.swap(0,i);
-                self.combinations(tmp.as_slice());
-            });
-
-        self.path.pop();
-    }
-}
-
 #[derive(Debug, Copy, Clone)]
 struct Valve {
     pressure: usize,
@@ -131,7 +131,7 @@ impl<'a> ValveNet<'a> {
         cache.build(self, valves);
         self.cache = cache;
     }
-    fn path_pressure(&self, mut time_left: usize, combinations: &[&str]) -> usize {
+    fn path_pressure(&'a self, mut time_left: usize, combinations: &[&'a str]) -> usize {
         combinations
             .windows(2)
             .map_while(|valves| {
@@ -142,7 +142,10 @@ impl<'a> ValveNet<'a> {
                     } else if let Some(cost) = self.cache.pull(target,valves[0]) {
                         Some(cost)
                     } else {
-                        self.find_path_cost(valves[0], &target)
+                        println!("cache miss");
+                        let cost = self.find_path_cost(valves[0], &target);
+                        self.cache.push(valves[0],target,cost.unwrap());
+                        cost
                     }
                 }.unwrap();
                 if time_left <  cost {
