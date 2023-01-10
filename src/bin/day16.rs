@@ -20,7 +20,7 @@ const BUDGET:usize = 30;
 fn main() {
 
     let input = std::fs::read_to_string("src/bin/day16_input.txt").expect("ops!");
-    let mut net = ValveNet::parse(input.as_str());
+    let net = ValveNet::parse(input.as_str());
 
     let start = "AA";
     let valves = net.flow.iter()
@@ -30,7 +30,7 @@ fn main() {
             out
         });
     println!("Valves: {:?}", valves );
-    net.build_cache(&valves);
+    // net.build_cache(&valves);
     let (max,solution) = net.greedy_search(BUDGET, start);
     println!("Pressure (Greedy): {}\nPath: {:?}", max, solution );
 
@@ -127,7 +127,7 @@ impl<'a> ValveNet<'a> {
         ValveBacktrack { net: self, path: vec![], solution: vec![], max }
     }
     fn build_cache(&mut self, valves: &[&'a str]) {
-        let mut cache = Cache { cache: Cell::new(HashMap::new()) };
+        let cache = Cache { cache: Cell::new(HashMap::new()) };
         cache.build(self, valves);
         self.cache = cache;
     }
@@ -142,8 +142,7 @@ impl<'a> ValveNet<'a> {
                     } else if let Some(cost) = self.cache.pull(target,valves[0]) {
                         Some(cost)
                     } else {
-                        println!("cache miss");
-                        let cost = self.find_path_cost(valves[0], &target);
+                        let cost = self.find_path_cost(valves[0], target);
                         self.cache.push(valves[0],target,cost.unwrap());
                         cost
                     }
@@ -189,7 +188,7 @@ impl<'a> ValveNet<'a> {
         }
         None
     }
-    fn greedy_search(&'a self, mut time_left:usize, start: &'a str) -> (usize,Vec<&'a str>) {
+    fn greedy_search(&self, mut time_left:usize, start: &'a str) -> (usize,Vec<&'a str>) {
         let mut queue = VecDeque::new();
         // let mut combination = vec!["CC", "EE", "HH", "JJ", "BB", "DD", "AA"];
         let mut flow = self.flow.iter()
