@@ -15,22 +15,24 @@ Valve HH has flow rate=22; tunnel leads to valve GG
 Valve II has flow rate=0; tunnels lead to valves AA, JJ
 Valve JJ has flow rate=21; tunnel leads to valve II";
 
+const BUDGET:usize = 30;
 
 fn main() {
 
-    struct Combinations<'a> {
+    struct ValveBacktrack<'a> {
         path: Vec<&'a str>,
         solution: Vec<&'a str>,
         max: usize
+
     }
-    impl<'a> Combinations<'a> {
+    impl<'a> ValveBacktrack<'a> {
         fn combinations(&mut self, net: &ValveNet, valves: &[&'a str]) {
 
             self.path.push(valves[0]);
 
             if valves.len() == 1 {
                 // ok we got potential solution, store it
-                let pressure = path_pressure(&net, &self.path);
+                let pressure = path_pressure(&net, BUDGET, &self.path);
                 if pressure > self.max {
                     println!("Found {},{:?}",pressure,self.path);
                     self.max = pressure;
@@ -61,38 +63,35 @@ fn main() {
             out
         });
     println!("Valves: {:?}", valves );
-    let (max,solution) = greedy_search(&net, start);
+    let (max,solution) = greedy_search(&net, BUDGET, start);
     println!("Pressure (Greedy): {}", max );
 
     // create all valve visit order combinations
-    let mut comb = Combinations{ path: vec![], solution: vec![], max: 0 };
+    let mut comb = ValveBacktrack { path: vec![], solution: vec![], max };
     comb.combinations(&net,&solution);
 
     println!("Solutions: {:?}\nMax flow {:?}", comb.solution, comb.max)
 }
 
-fn path_pressure(volcano:&ValveNet, combinations: &[&str]) -> usize {
-
-    let mut time_left = 30;
+fn path_pressure(net:&ValveNet, mut time_left: usize, combinations: &[&str]) -> usize {
 
     combinations
         .windows(2)
         .map_while(|valves| {
             let target = valves[1];
-            let path = BFS::find_path(&volcano, valves[0], &target);
+            let path = net.find_path(valves[0], &target);
             if time_left < path.len() {
                 None
             } else {
                 time_left -= path.len(); // = len-1 steps + open valve
-                let total_pressure_released = volcano.flow[&target].pressure * time_left;
-                // println!("====> Time {time_left}, {:?}", (&target, path.len(), total_pressure_released));
+                let total_pressure_released = net.flow[&target].pressure * time_left;
                 Some(total_pressure_released)
             }
         })
         .sum::<usize>()
 }
 
-fn greedy_search<'a>(net:&'a ValveNet, start: &'a str) -> (usize,Vec<&'a str>) {
+fn greedy_search<'a>(net:&'a ValveNet, mut time_left:usize, start: &'a str) -> (usize,Vec<&'a str>) {
     let mut queue = VecDeque::new();
     // let mut combination = vec!["CC", "EE", "HH", "JJ", "BB", "DD", "AA"];
     let mut flow = net.flow.iter()
@@ -102,7 +101,6 @@ fn greedy_search<'a>(net:&'a ValveNet, start: &'a str) -> (usize,Vec<&'a str>) {
 
     queue.push_back(start);
 
-    let mut budget = 30;
     let mut pressure = 0;
 
     while let Some(valve) = queue.pop_front() {
@@ -112,15 +110,11 @@ fn greedy_search<'a>(net:&'a ValveNet, start: &'a str) -> (usize,Vec<&'a str>) {
         let mut options = flow.iter()
             .filter(|&(_,valve)| valve.pressure > 0  && !valve.open )
             .map(|(target,_)|
-                BFS::find_path(&net, &valve, &target)
+                net.find_path(&valve, &target)
             )
-            // .inspect(|path| print!("\t {:?}",path))
             .map(|path|
                 (path[0], path.len(), net.flow[&path[0]].pressure/(path.len()))
             )
-            // .inspect(|(target, time, value)|
-            //     println!("\tPressure:{}, Cost:{} Value: {:?} = {:?}", volcano.flow[target].pressure, time, value, target)
-            // )
             .collect::<Vec<_>>();
 
         options.sort_by(|a,b|
@@ -131,18 +125,15 @@ fn greedy_search<'a>(net:&'a ValveNet, start: &'a str) -> (usize,Vec<&'a str>) {
             }
         );
 
-        // let Some(next) = combination.pop() else { continue };
-        // if let Some(&(ref valve,cost,value)) = options.iter().find(|(s,_,_)| s.eq(next) ) {
-
         if let Some((valve,cost,value)) = options.pop() {
             path.push(valve);
-            if budget < cost {
+            if time_left < cost {
                 path.extend(options.iter().map(|&(v,..)| v));
                 return (pressure,path)
             }
-            budget -= cost;
-            pressure += net.flow[&valve].pressure * budget;
-            println!("====> Time: {budget} got for Option {:?} out of Options: {:?}",(&valve,cost,value,budget,pressure),options);
+            time_left -= cost;
+            pressure += net.flow[&valve].pressure * time_left;
+            println!("====> Time: {time_left} got for Option {:?} out of Options: {:?}", (&valve, cost, value, time_left, pressure), options);
             queue.push_back(valve);
         }
     }
@@ -152,10 +143,25 @@ fn greedy_search<'a>(net:&'a ValveNet, start: &'a str) -> (usize,Vec<&'a str>) {
 #[derive(Debug)]
 struct BFS();
 impl BFS {
-    fn find_path<'a>(vol:&'a ValveNet, start:&'a str, end:&'a str) -> Vec<&'a str> {
+}
+
+#[derive(Debug, Copy, Clone)]
+struct Valve {
+    pressure: usize,
+    open: bool
+}
+
+struct ValveNet<'a> {
+    graph: HashMap<&'a str,Vec<&'a str>>,
+    flow: HashMap<&'a str, Valve>,
+    cache: HashMap<(&'a str,&'a str),usize>
+}
+
+impl ValveNet<'_> {
+    fn find_path<'a>(&'a self, start:&'a str, end:&'a str) -> Vec<&'a str> {
         let mut queue = VecDeque::new();
         let mut state: HashMap<&str,(bool,Option<&str>)> =
-            vol.flow.iter()
+            self.flow.iter()
                 .map(|(&key,_)| (key, (false, None)))
                 .collect::<HashMap<_,_>>();
         let mut path = vec![];
@@ -173,7 +179,7 @@ impl BFS {
                 break
             }
             state.get_mut(valve).unwrap().0 = true;
-            for v in &vol.graph[valve] {
+            for &v in &self.graph[valve] {
                 if !state[v].0 {
                     state.get_mut(v).unwrap().1 = Some(valve);
                     queue.push_back(v)
@@ -182,20 +188,6 @@ impl BFS {
         }
         path
     }
-}
-
-#[derive(Debug, Copy, Clone)]
-struct Valve {
-    pressure: usize,
-    open: bool
-}
-
-struct ValveNet<'a> {
-    graph: HashMap<&'a str,Vec<&'a str>>,
-    flow: HashMap<&'a str, Valve>
-}
-
-impl ValveNet<'_> {
     fn parse(input: &str) -> ValveNet {
         let (graph, flow) = input.lines()
             .map(|line| {
@@ -220,6 +212,6 @@ impl ValveNet<'_> {
                 (g,f)
             });
 
-        ValveNet { graph, flow }
+        ValveNet { graph, flow, cache: HashMap::new() }
     }
 }
