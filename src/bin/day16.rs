@@ -1,4 +1,4 @@
-// #![feature(let_chains)]
+use std::cell::Cell;
 use std::cmp::Ordering;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
@@ -23,7 +23,6 @@ fn main() {
         path: Vec<&'a str>,
         solution: Vec<&'a str>,
         max: usize
-
     }
     impl<'a> ValveBacktrack<'a> {
         fn combinations(&mut self, net: &ValveNet, valves: &[&'a str]) {
@@ -54,7 +53,8 @@ fn main() {
     }
 
     let input = std::fs::read_to_string("src/bin/day16_input.txt").expect("ops!");
-    let net = ValveNet::parse(INPUT);
+    let mut net = ValveNet::parse(input.as_str());
+
     let start = "AA";
     let valves = net.flow.iter()
         .filter(|(_, v)| v.pressure > 0 )
@@ -63,6 +63,7 @@ fn main() {
             out
         });
     println!("Valves: {:?}", valves );
+    net.build_cache(&valves.to_vec());
     let (max,solution) = greedy_search(&net, BUDGET, start);
     println!("Pressure (Greedy): {}", max );
 
@@ -74,16 +75,15 @@ fn main() {
 }
 
 fn path_pressure(net:&ValveNet, mut time_left: usize, combinations: &[&str]) -> usize {
-
     combinations
         .windows(2)
         .map_while(|valves| {
             let target = valves[1];
-            let path = net.find_path(valves[0], &target);
-            if time_left < path.len() {
+            let cost = net.find_path_cost(valves[0], &target).unwrap();
+            if time_left <  cost {
                 None
             } else {
-                time_left -= path.len(); // = len-1 steps + open valve
+                time_left -= cost; // = len-1 steps + open valve
                 let total_pressure_released = net.flow[&target].pressure * time_left;
                 Some(total_pressure_released)
             }
@@ -109,11 +109,11 @@ fn greedy_search<'a>(net:&'a ValveNet, mut time_left:usize, start: &'a str) -> (
 
         let mut options = flow.iter()
             .filter(|&(_,valve)| valve.pressure > 0  && !valve.open )
-            .map(|(target,_)|
-                net.find_path(&valve, &target)
+            .map(|(&target,_)|
+                (target, net.find_path_cost(&valve, &target).unwrap())
             )
-            .map(|path|
-                (path[0], path.len(), net.flow[&path[0]].pressure/(path.len()))
+            .map(|(&target,cost)|
+                (target, cost, net.flow[target].pressure/cost)
             )
             .collect::<Vec<_>>();
 
@@ -128,7 +128,7 @@ fn greedy_search<'a>(net:&'a ValveNet, mut time_left:usize, start: &'a str) -> (
         if let Some((valve,cost,value)) = options.pop() {
             path.push(valve);
             if time_left < cost {
-                path.extend(options.iter().map(|&(v,..)| v));
+                path.extend(options.iter().map(|&(v,..)| v).rev().take(5));
                 return (pressure,path)
             }
             time_left -= cost;
@@ -140,9 +140,38 @@ fn greedy_search<'a>(net:&'a ValveNet, mut time_left:usize, start: &'a str) -> (
     (pressure,path)
 }
 
-#[derive(Debug)]
-struct BFS();
-impl BFS {
+struct Cache<'a> {
+    cache: Cell<HashMap<(&'a str,&'a str),usize>>
+}
+impl<'a> Cache<'a> {
+    fn pull(&self, start: &str, end: &str) -> Option<usize> {
+        let cache = self.cache.take();
+        let mut out = None;
+        if let Some(&cost) = cache.get(&(start, end)) {
+            out = Some(cost);
+        } else if let Some(&cost) = cache.get(&(end, start)) {
+            out = Some(cost)
+        }
+        self.cache.set(cache);
+        out
+    }
+    fn push(&'a self, start: &'a str, end: &'a str, cost:usize) {
+        let mut cache = self.cache.take();
+        cache.insert((start, end),cost);
+        cache.insert((end, start),cost);
+        self.cache.set(cache);
+    }
+    fn build(&self, net: &ValveNet, valves: &[&'a str]) {
+        let mut cache = self.cache.take();
+        for &a in valves {
+            for &b in valves {
+                let cost = net.find_path_cost(a,b).unwrap();
+                cache.insert((a,b),cost);
+                cache.insert((b,a),cost);
+            }
+        }
+        self.cache.set(cache);
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -154,29 +183,41 @@ struct Valve {
 struct ValveNet<'a> {
     graph: HashMap<&'a str,Vec<&'a str>>,
     flow: HashMap<&'a str, Valve>,
-    cache: HashMap<(&'a str,&'a str),usize>
+    cache: Cache<'a>
 }
 
-impl ValveNet<'_> {
-    fn find_path<'a>(&'a self, start:&'a str, end:&'a str) -> Vec<&'a str> {
+impl<'a> ValveNet<'a> {
+    fn build_cache(&mut self, valves: &[&'a str]) {
+        let mut cache = Cache { cache: Cell::new(HashMap::new()) };
+        cache.build(self, valves);
+        self.cache = cache;
+    }
+    fn find_path_cost(&self, start:&str, end:&str) -> Option<usize> {
+        if let Some(cost) = self.cache.pull(start,end) {
+            return Some(cost)
+        } else if let Some(cost) = self.cache.pull(end,start) {
+            return Some(cost)
+        }
+
         let mut queue = VecDeque::new();
         let mut state: HashMap<&str,(bool,Option<&str>)> =
             self.flow.iter()
                 .map(|(&key,_)| (key, (false, None)))
                 .collect::<HashMap<_,_>>();
-        let mut path = vec![];
+        let mut path_cost = 0;
 
         queue.push_back(start);
         while let Some(valve) = queue.pop_front() {
 
             if valve.eq(end) {
-                path.push(valve);
                 let mut cur = valve;
                 while let Some(par) = state[&cur].1 {
-                    path.push(par);
+                    path_cost += 1;
                     cur = par;
                 }
-                break
+                path_cost += 1;
+                // self.cache.push(start,end,path_cost);
+                return Some(path_cost);
             }
             state.get_mut(valve).unwrap().0 = true;
             for &v in &self.graph[valve] {
@@ -186,7 +227,7 @@ impl ValveNet<'_> {
                 }
             }
         }
-        path
+        None
     }
     fn parse(input: &str) -> ValveNet {
         let (graph, flow) = input.lines()
@@ -212,6 +253,6 @@ impl ValveNet<'_> {
                 (g,f)
             });
 
-        ValveNet { graph, flow, cache: HashMap::new() }
+        ValveNet { graph, flow, cache: Cache { cache: Cell::new(HashMap::new()) } }
     }
 }
