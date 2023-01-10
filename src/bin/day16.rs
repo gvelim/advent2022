@@ -31,7 +31,7 @@ fn main() {
 
             if valves.len() == 1 {
                 // ok we got potential solution, store it
-                let pressure = path_pressure(&net, BUDGET, &self.path);
+                let pressure = net.path_pressure(BUDGET, &self.path);
                 if pressure > self.max {
                     println!("Found {},{:?}",pressure,self.path);
                     self.max = pressure;
@@ -63,32 +63,15 @@ fn main() {
             out
         });
     println!("Valves: {:?}", valves );
-    net.build_cache(&valves.to_vec());
+    net.build_cache(&valves);
     let (max,solution) = greedy_search(&net, BUDGET, start);
-    println!("Pressure (Greedy): {}", max );
+    println!("Pressure (Greedy): {}\nPath: {:?}", max, solution );
 
     // create all valve visit order combinations
     let mut comb = ValveBacktrack { path: vec![], solution: vec![], max };
     comb.combinations(&net,&solution);
 
     println!("Solutions: {:?}\nMax flow {:?}", comb.solution, comb.max)
-}
-
-fn path_pressure(net:&ValveNet, mut time_left: usize, combinations: &[&str]) -> usize {
-    combinations
-        .windows(2)
-        .map_while(|valves| {
-            let target = valves[1];
-            let cost = net.find_path_cost(valves[0], &target).unwrap();
-            if time_left <  cost {
-                None
-            } else {
-                time_left -= cost; // = len-1 steps + open valve
-                let total_pressure_released = net.flow[&target].pressure * time_left;
-                Some(total_pressure_released)
-            }
-        })
-        .sum::<usize>()
 }
 
 fn greedy_search<'a>(net:&'a ValveNet, mut time_left:usize, start: &'a str) -> (usize,Vec<&'a str>) {
@@ -128,7 +111,7 @@ fn greedy_search<'a>(net:&'a ValveNet, mut time_left:usize, start: &'a str) -> (
         if let Some((valve,cost,value)) = options.pop() {
             path.push(valve);
             if time_left < cost {
-                path.extend(options.iter().map(|&(v,..)| v).rev().take(5));
+                path.extend(options.iter().map(|&(v,..)| v).rev());
                 return (pressure,path)
             }
             time_left -= cost;
@@ -192,13 +175,32 @@ impl<'a> ValveNet<'a> {
         cache.build(self, valves);
         self.cache = cache;
     }
-    fn find_path_cost(&self, start:&str, end:&str) -> Option<usize> {
-        if let Some(cost) = self.cache.pull(start,end) {
-            return Some(cost)
-        } else if let Some(cost) = self.cache.pull(end,start) {
-            return Some(cost)
-        }
+    fn path_pressure(&self, mut time_left: usize, combinations: &[&str]) -> usize {
+        combinations
+            .windows(2)
+            .map_while(|valves| {
+                let target = valves[1];
+                let cost = {
+                    if let Some(cost) = self.cache.pull(valves[0],target) {
+                        Some(cost)
+                    } else if let Some(cost) = self.cache.pull(target,valves[0]) {
+                        Some(cost)
+                    } else {
+                        self.find_path_cost(valves[0], &target)
+                    }
+                }.unwrap();
+                if time_left <  cost {
+                    None
+                } else {
+                    time_left -= cost; // = len-1 steps + open valve
+                    let total_pressure_released = self.flow[&target].pressure * time_left;
+                    Some(total_pressure_released)
+                }
+            })
+            .sum::<usize>()
+    }
 
+    fn find_path_cost(&self, start:&str, end:&str) -> Option<usize> {
         let mut queue = VecDeque::new();
         let mut state: HashMap<&str,(bool,Option<&str>)> =
             self.flow.iter()
@@ -216,7 +218,6 @@ impl<'a> ValveNet<'a> {
                     cur = par;
                 }
                 path_cost += 1;
-                // self.cache.push(start,end,path_cost);
                 return Some(path_cost);
             }
             state.get_mut(valve).unwrap().0 = true;
