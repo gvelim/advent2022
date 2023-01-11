@@ -115,7 +115,8 @@ struct Valve {
 struct ValveNet<'a> {
     graph: HashMap<&'a str,Vec<&'a str>>,
     flow: HashMap<&'a str, Valve>,
-    cache: Cache<'a>
+    cache: Cache<'a>,
+    time: Cell<std::time::SystemTime>
 }
 
 impl<'a> ValveNet<'a> {
@@ -136,7 +137,8 @@ impl<'a> ValveNet<'a> {
                     match self.cache.pull(valves[0],target) {
                         Some(cost) => cost,
                         None => {
-                            println!("missed cache {:?},", (valves[0], target));
+                            let time = self.time.replace(std::time::SystemTime::now());
+                            println!("missed cache {:?} {:.2?},", (valves[0], target), std::time::SystemTime::now().duration_since(time).unwrap());
                             let cost = self.find_path_cost(valves[0], target).unwrap();
                             self.cache.push(valves[0], target, cost);
                             cost
@@ -184,8 +186,8 @@ impl<'a> ValveNet<'a> {
         None
     }
     fn greedy_search(&self, mut time_left:usize, start: &'a str) -> (usize,Vec<&'a str>) {
+
         let mut queue = VecDeque::new();
-        // let mut combination = vec!["CC", "EE", "HH", "JJ", "BB", "DD", "AA"];
         let mut flow = self.flow.iter()
             .map(|(key,valve)| (key, valve.clone()))
             .collect::<HashMap<_,_>>();
@@ -256,6 +258,6 @@ impl<'a> ValveNet<'a> {
                 (g,f)
             });
 
-        ValveNet { graph, flow, cache: Cache { cache: Cell::new(HashMap::new()) } }
+        ValveNet { graph, flow, cache: Cache { cache: Cell::new(HashMap::new()) }, time: Cell::new(std::time::SystemTime::now()) }
     }
 }
