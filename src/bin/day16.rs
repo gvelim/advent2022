@@ -19,6 +19,7 @@ const BUDGET:usize = 30;
 
 fn main() {
 
+    // Found 2059,["AA", "II", "JI", "VC", "TE", "XF", "WT", "DM", "ZK", "KI", "VF", "DU", "BD", "XS", "IY"]
     let input = std::fs::read_to_string("src/bin/day16_input.txt").expect("ops!");
     let net = ValveNet::parse(input.as_str());
 
@@ -82,12 +83,7 @@ struct Cache<'a> {
 impl<'a> Cache<'a> {
     fn pull(&self, start: &str, end: &str) -> Option<usize> {
         let cache = self.cache.take();
-        let mut out = None;
-        if let Some(&cost) = cache.get(&(start, end)) {
-            out = Some(cost);
-        } else if let Some(&cost) = cache.get(&(end, start)) {
-            out = Some(cost)
-        }
+        let out = cache.get(&(start, end)).and_then(|cost| Some(*cost));
         self.cache.set(cache);
         out
     }
@@ -136,17 +132,16 @@ impl<'a> ValveNet<'a> {
             .windows(2)
             .map_while(|valves| {
                 let target = valves[1];
-                let cost = {
-                    if let Some(cost) = self.cache.pull(valves[0],target) {
-                        Some(cost)
-                    } else if let Some(cost) = self.cache.pull(target,valves[0]) {
-                        Some(cost)
-                    } else {
-                        let cost = self.find_path_cost(valves[0], target);
-                        self.cache.push(valves[0],target,cost.unwrap());
-                        cost
-                    }
-                }.unwrap();
+                let cost =
+                    match self.cache.pull(valves[0],target) {
+                        Some(cost) => cost,
+                        None => {
+                            println!("missed cache {:?},", (valves[0], target));
+                            let cost = self.find_path_cost(valves[0], target).unwrap();
+                            self.cache.push(valves[0], target, cost);
+                            cost
+                        }
+                    };
                 if time_left <  cost {
                     None
                 } else {
@@ -225,7 +220,7 @@ impl<'a> ValveNet<'a> {
             if let Some((valve,cost,value)) = options.pop() {
                 path.push(valve);
                 if time_left < cost {
-                    path.extend(options.iter().map(|&(v,..)| v).rev());
+                    path.extend(options.iter().map(|&(v,..)| v).rev().take(6));
                     return (pressure,path)
                 }
                 time_left -= cost;
