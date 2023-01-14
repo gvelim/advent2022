@@ -1,5 +1,6 @@
 use std::cell::Cell;
 use std::collections::{HashMap, VecDeque};
+use std::hash::Hash;
 use std::str::FromStr;
 
 const INPUT: &str = "Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
@@ -100,38 +101,24 @@ impl<'a> ValveBacktrack<'a> {
                     }
                 }
             });
-
         // Leaving the valve we entered; finished testing combinations
         self.path.pop();
     }
 }
 
-struct Cache<'a> {
-    cache: Cell<HashMap<(&'a str,&'a str),usize>>
+struct Cache<T> where T: Eq + Hash {
+    cache: Cell<HashMap<T,usize>>
 }
-impl<'a> Cache<'a> {
-    fn pull(&self, start: &str, end: &str) -> Option<usize> {
+impl<T> Cache<T> where T: Eq + Hash {
+    fn pull(&self, key: T) -> Option<usize> {
         let cache = self.cache.take();
-        let out = cache.get(&(start, end)).map(|cost| *cost);
+        let out = cache.get(&key).copied();
         self.cache.set(cache);
         out
     }
-    fn push(&self, start: &'a str, end: &'a str, cost:usize) {
+    fn push(&self, key: T, cost: usize) {
         let mut cache = self.cache.take();
-        cache.insert((start, end),cost);
-        cache.insert((end, start),cost);
-        self.cache.set(cache);
-    }
-    fn build(&self, net: &'a ValveNet<'a>, valves: &[&'a str]) {
-        let mut cache = self.cache.take();
-        for &a in valves {
-            for &b in valves {
-                cache.insert(
-                    (a,b),
-                    net.travel_distance(a, b).unwrap()
-                );
-            }
-        }
+        cache.insert(key,cost);
         self.cache.set(cache);
     }
 }
@@ -144,7 +131,7 @@ struct Valve {
 struct ValveNet<'a> {
     graph: HashMap<&'a str,Vec<&'a str>>,
     flow: HashMap<&'a str, Valve>,
-    cache: Cache<'a>
+    cache: Cache<(&'a str, &'a str)>
 }
 
 impl<'a> ValveNet<'a> {
@@ -157,8 +144,16 @@ impl<'a> ValveNet<'a> {
             max: 0,
             time: Cell::new(std::time::SystemTime::now()) }
     }
-    fn build_cache(&'a self, valves: &[&'a str]) {
-        self.cache.build(self, valves);
+    fn build_cache(&self, valves: &[&'a str]) {
+        for &a in valves {
+            for &b in valves {
+                self.cache.push(
+                    (a,b),
+                    self.travel_distance(a, b).unwrap()
+                );
+            }
+        }
+
     }
     fn nonzero_valves(&self, start:&'a str) -> Vec<&str> {
         self.flow.iter()
@@ -170,7 +165,7 @@ impl<'a> ValveNet<'a> {
     }
     fn travel_distance(&self, start:&'a str, end:&'a str) -> Option<usize> {
 
-        if let Some(cost) = self.cache.pull(start,end) {
+        if let Some(cost) = self.cache.pull((start,end)) {
             return Some(cost)
         }
 
@@ -191,7 +186,7 @@ impl<'a> ValveNet<'a> {
                     cur = par;
                 }
                 path_cost += 1;
-                self.cache.push(start, end, path_cost);
+                self.cache.push((start, end), path_cost);
                 return Some(path_cost);
             }
             state.get_mut(valve).unwrap().0 = true;
