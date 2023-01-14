@@ -2,7 +2,6 @@ use std::cell::Cell;
 use std::cmp::Ordering;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
-use std::os::raw::c_void;
 use std::str::FromStr;
 
 const INPUT: &str = "Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
@@ -28,13 +27,16 @@ fn main() {
     let valves = net.nonzero_valves(start);
     println!("Valves: {:?}", valves );
 
-    let (max_seed, solution_seed) = net.greedy_search(TIME, start);
-    println!("Pressure (Greedy): {}\nPath: {:?}", max_seed, solution_seed);
+    net.build_cache(&valves);
+
+    let time = std::time::SystemTime::now();
 
     // create all valve visit order combinations
     let mut btrack = net.backtrack();
-    btrack.combinations_v2(TIME, &solution_seed);
-    println!("Solutions: {:?}\nMax flow {:?}", (btrack.solution, btrack.pressure), btrack.max);
+    btrack.combinations_dfs(TIME, &valves);
+    println!("Lapse time: {:?}",std::time::SystemTime::now().duration_since(time));
+    println!("Max flow {:?}\nSolution: {:?}\n", btrack.max, btrack.solution);
+
 }
 
 struct ValveBacktrack<'a> {
@@ -48,53 +50,60 @@ struct ValveBacktrack<'a> {
 
 impl<'a> ValveBacktrack<'a> {
 
-    fn combinations_v2(&mut self, mut time_left: usize, valves: &[&'a str]) {
+    fn combinations_dfs(&mut self, time_left: usize, valves: &[&'a str]) {
 
+        // Entering a valve
         self.path.push(valves[0]);
 
-        if valves.len() == 1 {
-            let time = self.time.replace(std::time::SystemTime::now());
-            print!("\nIn time found: {:?},{:?}",self.pressure.last(), self.path);
-            print!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
+        let &total_pressure_now = self.pressure.last().unwrap();
 
-            let &total = self.pressure.last().unwrap();
-            if total > self.max {
-                self.max = total;
+        // Is this the last valve to enter for current combination ?
+        if valves.len() == 1 {
+            // we have a candidate solution; valve combination within 30"
+            if self.max < total_pressure_now {
+                self.max = total_pressure_now;
                 self.solution = self.path.clone();
-                print!("<<< MAX\n");
             }
+            // Leaving the valve we've entered
             self.path.pop();
+            // END OF RECURSION HERE
             return;
         }
 
-        let mut tmp = valves[1..].to_vec();
-        (0..tmp.len())
+        // Run combinations of starting valve[0] against target valves, that is, valves[1..n]
+        let mut targets = valves[1..].to_vec();
+        (0..targets.len())
             .for_each(|i|{
-                tmp.swap(0,i);
+                // put i'th target always first by swapping
+                targets.swap(0, i);
 
-                let target = tmp[0];
-                let cost = self.net.find_path_cost(valves[0], target).unwrap();
+                let cost = self.net.travel_distance(valves[0], targets[0]).unwrap();
+                // do we have time to move to valve ?
                 if time_left >= cost {
-
-                    let time = time_left - cost;
-                    let a = self.pressure.last().unwrap();
-                    let b = self.net.flow[&target].pressure * time;
-                    self.pressure.push(a+b);
-                    self.combinations_v2(time,&tmp);
+                    // Store the total pressure released up to this point / combination
+                    self.pressure.push(
+                        total_pressure_now +
+                            self.net.flow[&targets[0]].pressure * (time_left - cost)
+                    );
+                    // move to the next position with start:target[0], end:targets[1]
+                    self.combinations_dfs(time_left - cost, &targets);
+                    // we've finished with this combination hence remove from total pressure
                     self.pressure.pop();
 
                 } else {
-                    let &total = self.pressure.last().unwrap();
-                    if total > self.max {
-                        self.max = total;
+                    // We've run out of time so we've finished and store the total pressure for this combination
+                    if total_pressure_now > self.max {
+                        self.max = total_pressure_now;
                         self.solution = self.path.clone();
 
                         let time = self.time.replace(std::time::SystemTime::now());
-                        print!("\nRun out of time: {:?},{:?}",self.pressure.last(), self.path);
+                        print!("Found (OoT): {:?},{:?}", total_pressure_now, self.path);
                         println!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
                     }
                 }
             });
+
+        // Leaving the valve we entered; finished testing combinations
         self.path.pop();
     }
 
@@ -127,7 +136,7 @@ impl<'a> ValveBacktrack<'a> {
             .windows(2)
             .map_while(|valves| {
                 let target = valves[1];
-                let cost = self.net.find_path_cost(valves[0], target).unwrap();
+                let cost = self.net.travel_distance(valves[0], target).unwrap();
                 if time_left <  cost {
                     None
                 } else {
@@ -155,6 +164,18 @@ impl<'a> Cache<'a> {
         cache.insert((end, start),cost);
         self.cache.set(cache);
     }
+    fn build(&self, net: &'a ValveNet<'a>, valves: &[&'a str]) {
+        let mut cache = self.cache.take();
+        for &a in valves {
+            for &b in valves {
+                cache.insert(
+                    (a,b),
+                    net.travel_distance(a, b).unwrap()
+                );
+            }
+        }
+        self.cache.set(cache);
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -166,8 +187,7 @@ struct Valve {
 struct ValveNet<'a> {
     graph: HashMap<&'a str,Vec<&'a str>>,
     flow: HashMap<&'a str, Valve>,
-    cache: Cache<'a>,
-    time: Cell<std::time::SystemTime>
+    cache: Cache<'a>
 }
 
 impl<'a> ValveNet<'a> {
@@ -180,6 +200,9 @@ impl<'a> ValveNet<'a> {
             max: 0,
             time: Cell::new(std::time::SystemTime::now()) }
     }
+    fn build_cache(&'a self, valves: &'a [&'a str]) {
+        self.cache.build(self, valves);
+    }
     fn nonzero_valves(&self, start:&'a str) -> Vec<&str> {
         self.flow.iter()
             .filter(|(_, v)| v.pressure > 0 )
@@ -188,14 +211,11 @@ impl<'a> ValveNet<'a> {
                 out
             })
     }
-    fn find_path_cost(&'a self, start:&'a str, end:&'a str) -> Option<usize> {
+    fn travel_distance(&'a self, start:&'a str, end:&'a str) -> Option<usize> {
 
         if let Some(cost) = self.cache.pull(start,end) {
             return Some(cost)
         }
-
-        let time = self.time.replace(std::time::SystemTime::now());
-        println!("missed cache {:?} {:.2?},", (start, end), std::time::SystemTime::now().duration_since(time).unwrap());
 
         let mut queue = VecDeque::new();
         let mut state: HashMap<&str,(bool,Option<&str>)> =
@@ -246,7 +266,7 @@ impl<'a> ValveNet<'a> {
             let mut options = flow.iter()
                 .filter(|&(_,valve)| valve.pressure > 0  && !valve.open )
                 .map(|(&target,_)|
-                    (target, self.find_path_cost(&valve, &target).unwrap())
+                    (target, self.travel_distance(&valve, &target).unwrap())
                 )
                 .map(|(&target,cost)|
                     (target, cost, self.flow[target].pressure/cost)
@@ -275,7 +295,6 @@ impl<'a> ValveNet<'a> {
         }
         (pressure,path)
     }
-
     fn parse(input: &str) -> ValveNet {
         let (graph, flow) = input.lines()
             .map(|line| {
@@ -300,13 +319,13 @@ impl<'a> ValveNet<'a> {
                 (g,f)
             });
 
-        ValveNet { graph, flow, cache: Cache { cache: Cell::new(HashMap::new()) }, time: Cell::new(std::time::SystemTime::now()) }
+        ValveNet { graph, flow, cache: Cache { cache: Cell::new(HashMap::new()) } }
     }
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
-
     #[test]
     fn test_greedy_vs_backtrack() {
         let net = ValveNet::parse(INPUT);
@@ -319,9 +338,9 @@ mod test {
                 out
             });
         println!("Valves: {:?}", valves);
-        net.build_cache(&valves);
-        // let (max_seed, solution_seed) = net.greedy_search(TIME, start);
-        // println!("Pressure (Greedy): {}\nPath: {:?}", max_seed, solution_seed);
+
+        let (max_seed, solution_seed) = net.greedy_search(TIME, start);
+        println!("Pressure (Greedy): {}\nPath: {:?}", max_seed, solution_seed);
 
         let backtrack = net.backtrack();
         let pressure = backtrack.path_pressure(TIME, &["AA", "DD", "BB", "JJ", "HH", "EE", "CC"]);
