@@ -116,7 +116,7 @@ impl<'a> Cache<'a> {
         self.cache.set(cache);
         out
     }
-    fn push(&'a self, start: &'a str, end: &'a str, cost:usize) {
+    fn push(&self, start: &'a str, end: &'a str, cost:usize) {
         let mut cache = self.cache.take();
         cache.insert((start, end),cost);
         cache.insert((end, start),cost);
@@ -157,7 +157,7 @@ impl<'a> ValveNet<'a> {
             max: 0,
             time: Cell::new(std::time::SystemTime::now()) }
     }
-    fn build_cache(&'a self, valves: &'a [&'a str]) {
+    fn build_cache(&'a self, valves: &[&'a str]) {
         self.cache.build(self, valves);
     }
     fn nonzero_valves(&self, start:&'a str) -> Vec<&str> {
@@ -168,7 +168,7 @@ impl<'a> ValveNet<'a> {
                 out
             })
     }
-    fn travel_distance(&'a self, start:&'a str, end:&'a str) -> Option<usize> {
+    fn travel_distance(&self, start:&'a str, end:&'a str) -> Option<usize> {
 
         if let Some(cost) = self.cache.pull(start,end) {
             return Some(cost)
