@@ -112,7 +112,7 @@ struct Cache<T> where T: Eq + Hash {
 impl<T> Cache<T> where T: Eq + Hash {
     fn pull(&self, key: T) -> Option<usize> {
         let cache = self.cache.take();
-        let out = cache.get(&key).map(|cost| *cost);
+        let out = cache.get(&key).copied();
         self.cache.set(cache);
         out
     }
