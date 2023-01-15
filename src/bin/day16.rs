@@ -20,10 +20,10 @@ fn main() {
 
     // Found 2059,["AA", "II", "JI", "VC", "TE", "XF", "WT", "DM", "ZK", "KI", "VF", "DU", "BD", "XS", "IY"]
     let input = std::fs::read_to_string("src/bin/day16_input.txt").expect("ops!");
-    let net = ValveNet::parse(input.as_str());
+    let net = ValveNet::parse(INPUT);
 
     let start = "AA";
-    let valves = net.nonzero_valves(start);
+    let valves = net.nonzero_valves();
     println!("Valves: {:?}",valves);
 
     net.build_cache(&valves);
@@ -32,7 +32,7 @@ fn main() {
 
     // create all valve visit order combinations
     let mut btrack = net.backtrack();
-    btrack.combinations_dfs(TIME, &valves);
+    btrack.combinations_dfs(TIME, start, &valves);
     println!("Lapse time: {:?}",std::time::SystemTime::now().duration_since(time));
     println!("Max flow {:?}\nSolution: {:?}\n", btrack.max, btrack.solution);
 
@@ -49,19 +49,22 @@ struct ValveBacktrack<'a> {
 
 impl<'a> ValveBacktrack<'a> {
 
-    fn combinations_dfs(&mut self, time_left: usize, valves: &[&'a str]) {
-
+    fn combinations_dfs(&mut self, time_left: usize, start: &'a str, valves: &[&'a str]) {
         // Entering a valve
-        self.path.push(valves[0]);
+        self.path.push(start);
 
         let &total_pressure_now = self.pressure.last().unwrap();
 
         // Is this the last valve to enter for current combination ?
-        if valves.len() == 1 {
+        if valves.is_empty() {
             // we have a candidate solution; valve combination within 30"
             if self.max < total_pressure_now {
                 self.max = total_pressure_now;
                 self.solution = self.path.clone();
+
+                let time = self.time.replace(std::time::SystemTime::now());
+                print!("Found (EoV): {:?},{:?}", total_pressure_now, self.path);
+                println!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
             }
             // Leaving the valve we've entered
             self.path.pop();
@@ -70,13 +73,13 @@ impl<'a> ValveBacktrack<'a> {
         }
 
         // Run combinations of starting valve[0] against target valves, that is, valves[1..n]
-        let mut targets = valves[1..].to_vec();
+        let mut targets = valves.to_vec();
         (0..targets.len())
-            .for_each(|i|{
+            .for_each( |i| {
                 // put i'th target always first by swapping
                 targets.swap(0, i);
 
-                let cost = self.net.travel_distance(valves[0], targets[0]).unwrap();
+                let cost = self.net.travel_distance(start, targets[0]).unwrap();
                 // do we have time to move to valve ?
                 if time_left >= cost {
                     // Store the total pressure released up to this point / combination
@@ -85,7 +88,7 @@ impl<'a> ValveBacktrack<'a> {
                             self.net.flow[&targets[0]].pressure * (time_left - cost)
                     );
                     // move to the next position with start:target[0], end:targets[1]
-                    self.combinations_dfs(time_left - cost, &targets);
+                    self.combinations_dfs(time_left - cost, targets[0], &targets[1..]);
                     // we've finished with this combination hence remove from total pressure
                     self.pressure.pop();
 
@@ -155,10 +158,10 @@ impl<'a> ValveNet<'a> {
         }
 
     }
-    fn nonzero_valves(&self, start:&'a str) -> Vec<&str> {
+    fn nonzero_valves(&self) -> Vec<&str> {
         self.flow.iter()
             .filter(|(_, v)| v.pressure > 0 )
-            .fold( vec![start],|mut out, (name, _)| {
+            .fold( vec![],|mut out, (name, _)| {
                 out.push(name);
                 out
             })
