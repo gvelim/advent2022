@@ -20,7 +20,7 @@ fn main() {
 
     // Found 2059,["AA", "II", "JI", "VC", "TE", "XF", "WT", "DM", "ZK", "KI", "VF", "DU", "BD", "XS", "IY"]
     let input = std::fs::read_to_string("src/bin/day16_input.txt").expect("ops!");
-    let net = ValveNet::parse(INPUT);
+    let net = ValveNet::parse(input.as_str());
 
     let start = "AA";
     let valves = net.nonzero_valves();
@@ -53,17 +53,16 @@ impl<'a> ValveBacktrack<'a> {
         // Entering a valve
         self.path.push(start);
 
-        let &total_pressure_now = self.pressure.last().unwrap();
-
         // Is this the last valve to enter for current combination ?
         if valves.is_empty() {
+            let total_pressure = self.pressure.iter().filter(|&p| *p > 0).sum::<usize>();
             // we have a candidate solution; valve combination within 30"
-            if self.max < total_pressure_now {
-                self.max = total_pressure_now;
+            if self.max < total_pressure {
+                self.max = total_pressure;
                 self.solution = self.path.clone();
 
                 let time = self.time.replace(std::time::SystemTime::now());
-                print!("Found (EoV): {:?},{:?}", total_pressure_now, self.path);
+                print!("Found (EoV): {:?},{:?}", total_pressure, self.path);
                 println!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
             }
             // Leaving the valve we've entered
@@ -82,24 +81,23 @@ impl<'a> ValveBacktrack<'a> {
                 let cost = self.net.travel_distance(start, targets[0]).unwrap();
                 // do we have time to move to valve ?
                 if time_left >= cost {
+                    let pressure = self.net.flow[ &targets[0] ].pressure * (time_left - cost);
                     // Store the total pressure released up to this point / combination
-                    self.pressure.push(
-                        total_pressure_now +
-                            self.net.flow[&targets[0]].pressure * (time_left - cost)
-                    );
+                    self.pressure[time_left - cost] += pressure;
                     // move to the next position with start:target[0], end:targets[1]
                     self.combinations_dfs(time_left - cost, targets[0], &targets[1..]);
                     // we've finished with this combination hence remove from total pressure
-                    self.pressure.pop();
+                    self.pressure[time_left - cost] -= pressure;
 
                 } else {
+                    let total_pressure = self.pressure.iter().filter(|&p| *p > 0).sum::<usize>();
                     // We've run out of time so we've finished and store the total pressure for this combination
-                    if total_pressure_now > self.max {
-                        self.max = total_pressure_now;
+                    if total_pressure > self.max {
+                        self.max = total_pressure;
                         self.solution = self.path.clone();
 
                         let time = self.time.replace(std::time::SystemTime::now());
-                        print!("Found (OoT): {:?},{:?}", total_pressure_now, self.path);
+                        print!("Found (OoT): {:?},{:?}", total_pressure, self.path);
                         println!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
                     }
                 }
@@ -143,7 +141,7 @@ impl<'a> ValveNet<'a> {
             net: self,
             path: vec![],
             solution: vec![],
-            pressure:vec![0],
+            pressure:vec![0;TIME],
             max: 0,
             time: Cell::new(std::time::SystemTime::now()) }
     }
@@ -229,4 +227,39 @@ impl<'a> ValveNet<'a> {
 
         ValveNet { graph, flow, cache: Cache { cache: Cell::new(HashMap::new()) } }
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_sample_set() {
+        // Found 1651, ["AA", "DD", "BB", "JJ", "HH", "EE", "CC"]
+        assert_eq!( test_backtrack(INPUT), 1651)
+    }
+    #[test]
+    fn test_large_set() {
+        // Found 2059,["AA", "II", "JI", "VC", "TE", "XF", "WT", "DM", "ZK", "KI", "VF", "DU", "BD", "XS", "IY"]
+        let input = std::fs::read_to_string("src/bin/day16_input.txt").expect("ops!");
+        assert_eq!( test_backtrack(input.as_str()), 2059)
+    }
+
+    fn test_backtrack(input: &str) -> usize {
+
+        let net = ValveNet::parse(input);
+        let valves = net.nonzero_valves();
+        net.build_cache(&valves);
+
+        let time = std::time::SystemTime::now();
+        // create all valve visit order combinations
+        let mut btrack = net.backtrack();
+        btrack.combinations_dfs(TIME, "AA", &valves);
+
+        println!("Valves: {:?}",valves);
+        println!("Lapse time: {:?}",std::time::SystemTime::now().duration_since(time));
+        println!("Max flow {:?}\nSolution: {:?}\n", &btrack.max, &btrack.solution);
+
+        btrack.max
+    }
+
 }
