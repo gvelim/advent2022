@@ -32,7 +32,7 @@ fn main() {
 
     // create all valve visit order combinations
     let mut btrack = net.backtrack();
-    btrack.combinations_dfs(&[26,26], &[start,start], &valves);
+    btrack.combinations_elf_elephant(&[26,26], &[start,start], &valves);
     println!("Lapse time: {:?}",std::time::SystemTime::now().duration_since(time));
     println!("Max flow {:?}\nSolution: {:?}\n", btrack.max, (&btrack.solution,btrack.path));
 }
@@ -48,7 +48,7 @@ struct ValveBacktrack<'a> {
 
 impl<'a> ValveBacktrack<'a> {
 
-    fn combinations_dfs(&mut self, time_left: &[usize], start: &[&'a str], valves: &[&'a str]) {
+    fn combinations_elf_elephant(&mut self, time_left: &[usize], start: &[&'a str], valves: &[&'a str]) {
         // Entering a valves
         self.path.extend(start);
 
@@ -64,12 +64,16 @@ impl<'a> ValveBacktrack<'a> {
                 print!("Found (EoV): {:?},{:?}", total_pressure, (&self.path, &self.pressure));
                 println!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
             }
-            (0..start.len()).for_each(|_| { self.path.pop(); } );
+            self.path.pop();
+            self.path.pop();
             // END OF RECURSION HERE
             return;
         }
 
         // Run combinations of valves
+        // array structure uses 2 first positions for elf & elephant target valve
+        // the elf and elephant loops swap valves into position 0 and 1 respectively
+        // [0,1][2...n] = [elf target, elephant target][ valves to swap with positions 0 and 1 ]
         let mut targets = valves.to_vec();
         let target_len = targets.len();
         (0..target_len)
@@ -101,9 +105,9 @@ impl<'a> ValveBacktrack<'a> {
                             self.pressure[time_left[0] - elf_cost] += elf_pressure;
                             self.pressure[time_left[1] - eleph_cost] += eleph_pressure;
                             // move to the next position with start:target[0], end:targets[1]
-                            self.combinations_dfs(
+                            self.combinations_elf_elephant(
                                 &[time_left[0] - elf_cost, time_left[1] - eleph_cost],
-                                &[elf_target, eleph_target], &targets[2..]
+                                &targets[..2], &targets[2..]
                             );
                             // we've finished with this combination hence remove from total pressure
                             self.pressure[time_left[0] - elf_cost] -= elf_pressure;
@@ -123,7 +127,64 @@ impl<'a> ValveBacktrack<'a> {
                     })
             });
         // Leaving the valve we entered; finished testing combinations
-        (0..start.len()).for_each(|_| { self.path.pop(); } );
+        self.path.pop();
+        self.path.pop();
+    }
+    fn combinations_elf(&mut self, time_left: usize, start: &'a str, valves: &[&'a str]) {
+        // Entering a valve
+        self.path.push(start);
+
+        // Is this the last valve to enter for current combination ?
+        if valves.is_empty() {
+            let total_pressure = self.pressure.iter().filter(|&p| *p > 0).sum::<usize>();
+            // we have a candidate solution; valve combination within 30"
+            if self.max < total_pressure {
+                self.max = total_pressure;
+                self.solution = self.path.clone();
+
+                let time = self.time.replace(std::time::SystemTime::now());
+                print!("Found (EoV): {:?},{:?}", total_pressure, self.path);
+                println!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
+            }
+            // Leaving the valve we've entered
+            self.path.pop();
+            // END OF RECURSION HERE
+            return;
+        }
+
+        // Run combinations of starting valve[0] against target valves, that is, valves[1..n]
+        let mut targets = valves.to_vec();
+        (0..targets.len())
+            .for_each( |i| {
+                // put i'th target always first by swapping
+                targets.swap(0, i);
+
+                let cost = self.net.travel_distance(start, targets[0]).unwrap();
+                // do we have time to move to valve ?
+                if time_left >= cost {
+                    let pressure = self.net.flow[ &targets[0] ].pressure * (time_left - cost);
+                    // Store the total pressure released up to this point / combination
+                    self.pressure[time_left - cost] += pressure;
+                    // move to the next position with start:target[0], end:targets[1]
+                    self.combinations_elf(time_left - cost, targets[0], &targets[1..]);
+                    // we've finished with this combination hence remove from total pressure
+                    self.pressure[time_left - cost] -= pressure;
+
+                } else {
+                    let total_pressure = self.pressure.iter().filter(|&p| *p > 0).sum::<usize>();
+                    // We've run out of time so we've finished and store the total pressure for this combination
+                    if total_pressure > self.max {
+                        self.max = total_pressure;
+                        self.solution = self.path.clone();
+
+                        let time = self.time.replace(std::time::SystemTime::now());
+                        print!("Found (OoT): {:?},{:?}", total_pressure, self.path);
+                        println!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
+                    }
+                }
+            });
+        // Leaving the valve we entered; finished testing combinations
+        self.path.pop();
     }
 }
 
@@ -273,7 +334,7 @@ mod test {
         let time = std::time::SystemTime::now();
         // create all valve visit order combinations
         let mut btrack = net.backtrack();
-        btrack.combinations_dfs(TIME, "AA", &valves);
+        btrack.combinations_elf(TIME, "AA", &valves);
 
         println!("Valves: {:?}",valves);
         println!("Lapse time: {:?}",std::time::SystemTime::now().duration_since(time));
