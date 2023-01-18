@@ -79,13 +79,13 @@ impl<'a> ValveBacktrack<'a> {
         (0..target_len)
             .for_each( |elf| {
                 targets.swap(0, elf);
-
-                (1..target_len)
+                let mut eleph_targets = valves[1..].to_vec();
+                (0..eleph_targets.len())
                     .for_each(|elephant| {
-                        if elephant == elf { return }
+                        // if elephant == elf { return }
 
                         // put i'th target always first by swapping
-                        targets.swap(1, elephant);
+                        targets.swap(0, elephant);
                         let [elf_target, eleph_target] = targets[..2] else { panic!("Ops") };
 
                         let elf_cost = self.net.travel_distance(start[0], elf_target).unwrap();
