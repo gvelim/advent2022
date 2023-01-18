@@ -20,7 +20,7 @@ fn main() {
 
     // Found 2059,["AA", "II", "JI", "VC", "TE", "XF", "WT", "DM", "ZK", "KI", "VF", "DU", "BD", "XS", "IY"]
     let input = std::fs::read_to_string("src/bin/day16_input.txt").expect("ops!");
-    let net = ValveNet::parse(input.as_str());
+    let net = ValveNet::parse(INPUT);
 
     let start = "AA";
     let valves = net.nonzero_valves();
@@ -316,18 +316,18 @@ impl<'a> ValveNet<'a> {
 mod test {
     use super::*;
     #[test]
-    fn test_sample_set() {
+    fn test_sample_set_elf() {
         // Found 1651, ["AA", "DD", "BB", "JJ", "HH", "EE", "CC"]
-        assert_eq!( test_backtrack(INPUT), 1651)
+        assert_eq!( test_backtrack_elf(INPUT), 1651)
     }
     #[test]
-    fn test_large_set() {
+    fn test_large_set_elf() {
         // Found 2059,["AA", "II", "JI", "VC", "TE", "XF", "WT", "DM", "ZK", "KI", "VF", "DU", "BD", "XS", "IY"]
         let input = std::fs::read_to_string("src/bin/day16_input.txt").expect("ops!");
-        assert_eq!( test_backtrack(input.as_str()), 2059)
+        assert_eq!( test_backtrack_elf(input.as_str()), 2059)
     }
 
-    fn test_backtrack(input: &str) -> usize {
+    fn test_backtrack_elf(input: &str) -> usize {
 
         let net = ValveNet::parse(input);
         let valves = net.nonzero_valves();
@@ -341,6 +341,38 @@ mod test {
         println!("Valves: {:?}",valves);
         println!("Lapse time: {:?}",std::time::SystemTime::now().duration_since(time));
         println!("Max flow {:?}\nSolution: {:?}\n", &btrack.max, &btrack.solution);
+
+        btrack.max
+    }
+
+    #[test]
+    fn test_sample_set_elf_elephant() {
+        // Found 1651, ["AA", "DD", "BB", "JJ", "HH", "EE", "CC"]
+        assert_eq!( test_backtrack_elf_elephant(INPUT), 1707)
+    }
+    #[test]
+    fn test_large_set_elf_elephant() {
+        // Found 2059,["AA", "II", "JI", "VC", "TE", "XF", "WT", "DM", "ZK", "KI", "VF", "DU", "BD", "XS", "IY"]
+        let input = std::fs::read_to_string("src/bin/day16_input.txt").expect("ops!");
+        assert_eq!( test_backtrack_elf_elephant(input.as_str()), 2790)
+    }
+
+    fn test_backtrack_elf_elephant(input:&str) -> usize {
+
+        let net = ValveNet::parse(input);
+        let valves = net.nonzero_valves();
+
+        net.build_cache(&valves);
+
+        let time = std::time::SystemTime::now();
+
+        // create all valve visit order combinations
+        let mut btrack = net.backtrack();
+        btrack.combinations_elf_elephant(&[TIME-4,TIME-4], &["AA","AA"], &valves);
+
+        println!("Valves: {:?}",valves);
+        println!("Lapse time: {:?}",std::time::SystemTime::now().duration_since(time));
+        println!("Max flow {:?}\nSolution: {:?}\n", btrack.max, (&btrack.solution,btrack.path));
 
         btrack.max
     }
