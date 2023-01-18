@@ -20,7 +20,7 @@ fn main() {
 
     // Found 2059,["AA", "II", "JI", "VC", "TE", "XF", "WT", "DM", "ZK", "KI", "VF", "DU", "BD", "XS", "IY"]
     let input = std::fs::read_to_string("src/bin/day16_input.txt").expect("ops!");
-    let net = ValveNet::parse(INPUT);
+    let net = ValveNet::parse(input.as_str());
 
     let start = "AA";
     let valves = net.nonzero_valves();
@@ -64,8 +64,7 @@ impl<'a> ValveBacktrack<'a> {
                 print!("Found (EoV): {:?},{:?}", total_pressure, (&self.path, &self.pressure));
                 println!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
             }
-            self.path.pop();
-            self.path.pop();
+            start.iter().for_each(|_|{ self.path.pop(); });
             // END OF RECURSION HERE
             return;
         }
@@ -75,26 +74,24 @@ impl<'a> ValveBacktrack<'a> {
         // the elf and elephant loops swap valves into position 0 and 1 respectively
         // [0,1][2...n] = [elf target, elephant target][ valves to swap with positions 0 and 1 ]
         let mut targets = valves.to_vec();
-        let target_len = targets.len();
-        (0..target_len)
+        (0..targets.len())
             .for_each( |elf| {
                 targets.swap(0, elf);
-                let mut eleph_targets = valves[1..].to_vec();
-                (0..eleph_targets.len())
+
+                (1..targets.len())
                     .for_each(|elephant| {
-                        // if elephant == elf { return }
 
                         // put i'th target always first by swapping
-                        targets.swap(0, elephant);
+                        targets.swap(1, elephant);
                         let [elf_target, eleph_target] = targets[..2] else { panic!("Ops") };
 
                         let elf_cost = self.net.travel_distance(start[0], elf_target).unwrap();
                         let eleph_cost = self.net.travel_distance(start[1], eleph_target).unwrap();
 
-                        // println!("\tElf:{:?}, Eleph:{:?} - {:?}",
+                        // println!("\tElf:{:?}, Eleph:{:?} - {:?}{:?}",
                         //          (start[0], elf_target, elf_cost, time_left[0]),
                         //          (start[1], eleph_target, eleph_cost, time_left[1]),
-                        //          targets
+                        //          targets, (elf,elephant)
                         // );
 
                         // do we have time to move to valve ?
@@ -124,11 +121,15 @@ impl<'a> ValveBacktrack<'a> {
                                 println!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
                             }
                         }
-                    })
+                    });
+                // in combination with the swaps at the start of the loop
+                // this shift is critical to ensure the array order exiting the loop
+                // matches the order by which we entered the loop
+                // without it the order won't be the same hence not all pair valve combinations will be created
+                if targets[1..].len() > 2 { targets[1..].rotate_left(1); }
             });
         // Leaving the valve we entered; finished testing combinations
-        self.path.pop();
-        self.path.pop();
+        start.iter().for_each(|_|{ self.path.pop(); });
     }
     fn combinations_elf(&mut self, time_left: usize, start: &'a str, valves: &[&'a str]) {
         // Entering a valve
@@ -220,11 +221,12 @@ impl<'a> ValveNet<'a> {
     fn backtrack(&'a self) -> ValveBacktrack {
         ValveBacktrack {
             net: self,
-            path: vec![],
-            solution: vec![],
+            path: Vec::with_capacity(self.flow.len()),
+            solution: Vec::with_capacity(self.flow.len()),
             pressure:vec![0;TIME],
             max: 0,
-            time: Cell::new(std::time::SystemTime::now()) }
+            time: Cell::new(std::time::SystemTime::now())
+        }
     }
     fn build_cache(&self, valves: &[&'a str]) {
         for &a in valves {
@@ -342,5 +344,4 @@ mod test {
 
         btrack.max
     }
-
 }
