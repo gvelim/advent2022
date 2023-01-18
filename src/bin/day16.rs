@@ -73,42 +73,49 @@ impl<'a> ValveBacktrack<'a> {
         // array structure uses 2 first positions for elf & elephant target valve
         // the elf and elephant loops swap valves into position 0 and 1 respectively
         // [0,1][2...n] = [elf target, elephant target][ valves to swap with positions 0 and 1 ]
-        let mut targets = valves.to_vec();
-        (0..targets.len())
+        let mut elf_targets = valves.to_vec();
+        (0..elf_targets.len())
             .for_each( |elf| {
-                targets.swap(0, elf);
-
-                (1..targets.len())
+                // next valve combination
+                elf_targets.swap(0, elf);
+                // we need to preserve the valve order for the elf
+                // hence we need to pass a copy to the elephant to iterate over
+                // otherwise we won't generate all potential (elf,elephant) combinations
+                let mut eleph_targets = elf_targets.to_vec();
+                (1..eleph_targets.len())
                     .for_each(|elephant| {
-
-                        // put i'th target always first by swapping
-                        targets.swap(1, elephant);
-                        let [elf_target, eleph_target] = targets[..2] else { panic!("Ops") };
+                        // next valve combination; Note: eleph_targets[0] holds the elf position which is why we start from [1]
+                        eleph_targets.swap(1, elephant);
+                        let [elf_target, eleph_target] = eleph_targets[..2] else { panic!("Ops") };
 
                         let elf_cost = self.net.travel_distance(start[0], elf_target).unwrap();
                         let eleph_cost = self.net.travel_distance(start[1], eleph_target).unwrap();
 
-                        // println!("\tElf:{:?}, Eleph:{:?} - {:?}{:?}",
+                        // println!("\tElf:{:?}, Eleph:{:?} - {:?}{elf},{:?}{elephant}",
                         //          (start[0], elf_target, elf_cost, time_left[0]),
                         //          (start[1], eleph_target, eleph_cost, time_left[1]),
-                        //          targets, (elf,elephant)
+                        //          targets, eleph_targets
                         // );
 
                         // do we have time to move to valve ?
                         if elf_cost <= time_left[0] && eleph_cost <= time_left[1] {
-                            let elf_pressure = self.net.flow[&elf_target].pressure * (time_left[0] - elf_cost);
-                            let eleph_pressure = self.net.flow[&eleph_target].pressure * (time_left[1] - eleph_cost);
+
+                            let elf_time = time_left[0] - elf_cost;
+                            let eleph_time = time_left[1] - eleph_cost;
+
+                            let elf_pressure = self.net.flow[&elf_target].pressure * elf_time;
+                            let eleph_pressure = self.net.flow[&eleph_target].pressure * eleph_time;
                             // Store the total pressure released up to this point / combination
-                            self.pressure[time_left[0] - elf_cost] += elf_pressure;
-                            self.pressure[time_left[1] - eleph_cost] += eleph_pressure;
+                            self.pressure[elf_time] += elf_pressure;
+                            self.pressure[eleph_time] += eleph_pressure;
                             // move to the next position with start:target[0], end:targets[1]
                             self.combinations_elf_elephant(
-                                &[time_left[0] - elf_cost, time_left[1] - eleph_cost],
-                                &targets[..2], &targets[2..]
+                                &[elf_time, eleph_time],
+                                &eleph_targets[..2], &eleph_targets[2..]
                             );
                             // we've finished with this combination hence remove from total pressure
-                            self.pressure[time_left[0] - elf_cost] -= elf_pressure;
-                            self.pressure[time_left[1] - eleph_cost] -= eleph_pressure;
+                            self.pressure[elf_time] -= elf_pressure;
+                            self.pressure[eleph_time] -= eleph_pressure;
                         } else {
                             let total_pressure = self.pressure.iter().sum::<usize>();
                             // We've run out of time so we've finished and store the total pressure for this combination
@@ -122,11 +129,6 @@ impl<'a> ValveBacktrack<'a> {
                             }
                         }
                     });
-                // in combination with the swaps at the start of the loop
-                // this shift is critical to ensure the array order exiting the loop
-                // matches the order by which we entered the loop
-                // without it the order won't be the same hence not all pair valve combinations will be created
-                if targets[1..].len() > 2 { targets[1..].rotate_left(1); }
             });
         // Leaving the valve we entered; finished testing combinations
         start.iter().for_each(|_|{ self.path.pop(); });
@@ -163,13 +165,14 @@ impl<'a> ValveBacktrack<'a> {
                 let cost = self.net.travel_distance(start, targets[0]).unwrap();
                 // do we have time to move to valve ?
                 if time_left >= cost {
-                    let pressure = self.net.flow[ &targets[0] ].pressure * (time_left - cost);
+                    let time = time_left - cost;
+                    let pressure = self.net.flow[ &targets[0] ].pressure * time;
                     // Store the total pressure released up to this point / combination
-                    self.pressure[time_left - cost] += pressure;
+                    self.pressure[time] += pressure;
                     // move to the next position with start:target[0], end:targets[1]
-                    self.combinations_elf(time_left - cost, targets[0], &targets[1..]);
+                    self.combinations_elf(time, targets[0], &targets[1..]);
                     // we've finished with this combination hence remove from total pressure
-                    self.pressure[time_left - cost] -= pressure;
+                    self.pressure[time] -= pressure;
 
                 } else {
                     let total_pressure = self.pressure.iter().filter(|&p| *p > 0).sum::<usize>();
