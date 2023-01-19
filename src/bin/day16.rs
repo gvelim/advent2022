@@ -20,7 +20,7 @@ fn main() {
 
     // Found 2059,["AA", "II", "JI", "VC", "TE", "XF", "WT", "DM", "ZK", "KI", "VF", "DU", "BD", "XS", "IY"]
     let input = std::fs::read_to_string("src/bin/day16_input.txt").expect("ops!");
-    let net = ValveNet::parse(INPUT);
+    let net = ValveNet::parse(input.as_str());
 
     let start = "AA";
     let valves = net.nonzero_valves();
@@ -32,7 +32,7 @@ fn main() {
 
     // create all valve visit order combinations
     let mut btrack = net.backtrack();
-    btrack.combinations_elf_elephant(&[26,26], &[start,start], &valves);
+    btrack.combinations_elf_elephant(&[TIME-4,TIME-4], &[start,start], &valves);
     println!("Lapse time: {:?}",std::time::SystemTime::now().duration_since(time));
     println!("Max flow {:?}\nSolution: {:?}\n", btrack.max, (&btrack.solution,btrack.path));
 }
@@ -41,33 +41,33 @@ struct ValveBacktrack<'a> {
     net: &'a ValveNet<'a>,
     path: Vec<&'a str>,
     solution: Vec<&'a str>,
-    pressure: Vec<usize>,
     max: usize,
+    pressure: usize,
     time: Cell<std::time::SystemTime>
 }
 
 impl<'a> ValveBacktrack<'a> {
 
     fn combinations_elf_elephant(&mut self, time_left: &[usize], start: &[&'a str], valves: &[&'a str]) {
-        // Entering a valves
-        self.path.extend(start);
 
         // have we run out of valve destinations ?
         if valves.is_empty() {
-            let total_pressure = self.pressure.iter().sum::<usize>();
             // we have a candidate solution; valve combination within 30"
-            if self.max < total_pressure {
-                self.max = total_pressure;
+            if self.max < self.pressure {
+                self.max = self.pressure;
                 self.solution = self.path.clone();
+                self.solution.extend(start);
 
                 let time = self.time.replace(std::time::SystemTime::now());
-                print!("Found (EoV): {:?},{:?}", total_pressure, (&self.path, &self.pressure));
-                println!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
+                print!("Found (EoV): {:?},{:?}", self.pressure, &self.path);
+                println!(" - {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
             }
-            start.iter().for_each(|_|{ self.path.pop(); });
             // END OF RECURSION HERE
             return;
         }
+
+        // Entering a valves
+        self.path.extend(start);
 
         // Run combinations of valves
         // array structure uses 2 first positions for elf & elephant target valve
@@ -94,7 +94,7 @@ impl<'a> ValveBacktrack<'a> {
                         // println!("\tElf:{:?}, Eleph:{:?} - {:?}{elf},{:?}{elephant}",
                         //          (start[0], elf_target, elf_cost, time_left[0]),
                         //          (start[1], eleph_target, eleph_cost, time_left[1]),
-                        //          targets, eleph_targets
+                        //          elf_targets, eleph_targets
                         // );
 
                         // do we have time to move to valve ?
@@ -103,57 +103,54 @@ impl<'a> ValveBacktrack<'a> {
                             let elf_time = time_left[0] - elf_cost;
                             let eleph_time = time_left[1] - eleph_cost;
 
-                            let elf_pressure = self.net.flow[&elf_target].pressure * elf_time;
-                            let eleph_pressure = self.net.flow[&eleph_target].pressure * eleph_time;
+                            let pressure=
+                                self.net.flow[&elf_target].pressure * elf_time
+                                    + self.net.flow[&eleph_target].pressure * eleph_time;
                             // Store the total pressure released up to this point / combination
-                            self.pressure[elf_time] += elf_pressure;
-                            self.pressure[eleph_time] += eleph_pressure;
+                            self.pressure += pressure;
                             // move to the next position with start:target[0], end:targets[1]
                             self.combinations_elf_elephant(
                                 &[elf_time, eleph_time],
                                 &eleph_targets[..2], &eleph_targets[2..]
                             );
                             // we've finished with this combination hence remove from total pressure
-                            self.pressure[elf_time] -= elf_pressure;
-                            self.pressure[eleph_time] -= eleph_pressure;
+                            self.pressure -= pressure;
                         } else {
-                            let total_pressure = self.pressure.iter().sum::<usize>();
                             // We've run out of time so we've finished and store the total pressure for this combination
-                            if total_pressure > self.max {
-                                self.max = total_pressure;
+                            if self.pressure > self.max {
+                                self.max = self.pressure;
                                 self.solution = self.path.clone();
 
                                 let time = self.time.replace(std::time::SystemTime::now());
-                                print!("Found (OoT): {:?},{:?}", total_pressure, (&self.path, &self.pressure));
-                                println!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
+                                print!("Found (OoT): {:?},{:?}", self.pressure, self.path);
+                                println!(" - {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
                             }
                         }
                     });
             });
         // Leaving the valve we entered; finished testing combinations
-        start.iter().for_each(|_|{ self.path.pop(); });
+        self.path.pop();
+        self.path.pop();
     }
     fn combinations_elf(&mut self, time_left: usize, start: &'a str, valves: &[&'a str]) {
-        // Entering a valve
-        self.path.push(start);
 
         // Is this the last valve to enter for current combination ?
         if valves.is_empty() {
-            let total_pressure = self.pressure.iter().filter(|&p| *p > 0).sum::<usize>();
             // we have a candidate solution; valve combination within 30"
-            if self.max < total_pressure {
-                self.max = total_pressure;
+            if self.max < self.pressure {
+                self.max = self.pressure;
                 self.solution = self.path.clone();
+                self.solution.push(start);
 
                 let time = self.time.replace(std::time::SystemTime::now());
-                print!("Found (EoV): {:?},{:?}", total_pressure, self.path);
+                print!("Found (EoV): {:?},{:?}", self.pressure, self.path);
                 println!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
             }
-            // Leaving the valve we've entered
-            self.path.pop();
             // END OF RECURSION HERE
             return;
         }
+        // Entering a valve
+        self.path.push(start);
 
         // Run combinations of starting valve[0] against target valves, that is, valves[1..n]
         let mut targets = valves.to_vec();
@@ -168,21 +165,20 @@ impl<'a> ValveBacktrack<'a> {
                     let time = time_left - cost;
                     let pressure = self.net.flow[ &targets[0] ].pressure * time;
                     // Store the total pressure released up to this point / combination
-                    self.pressure[time] += pressure;
+                    self.pressure += pressure;
                     // move to the next position with start:target[0], end:targets[1]
                     self.combinations_elf(time, targets[0], &targets[1..]);
                     // we've finished with this combination hence remove from total pressure
-                    self.pressure[time] -= pressure;
+                    self.pressure -= pressure;
 
                 } else {
-                    let total_pressure = self.pressure.iter().filter(|&p| *p > 0).sum::<usize>();
                     // We've run out of time so we've finished and store the total pressure for this combination
-                    if total_pressure > self.max {
-                        self.max = total_pressure;
+                    if self.pressure > self.max {
+                        self.max = self.pressure;
                         self.solution = self.path.clone();
 
                         let time = self.time.replace(std::time::SystemTime::now());
-                        print!("Found (OoT): {:?},{:?}", total_pressure, self.path);
+                        print!("Found (OoT): {:?},{:?}", self.pressure, self.path);
                         println!("- {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
                     }
                 }
@@ -226,7 +222,7 @@ impl<'a> ValveNet<'a> {
             net: self,
             path: Vec::with_capacity(self.flow.len()),
             solution: Vec::with_capacity(self.flow.len()),
-            pressure:vec![0;TIME],
+            pressure: 0,
             max: 0,
             time: Cell::new(std::time::SystemTime::now())
         }
