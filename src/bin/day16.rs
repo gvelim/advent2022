@@ -1,5 +1,5 @@
 use std::cell::Cell;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 use std::str::FromStr;
 
@@ -23,10 +23,12 @@ fn main() {
     let net = ValveNet::parse(input.as_str());
 
     let start = "AA";
-    let valves = net.nonzero_valves();
+    let mut valves = net.nonzero_valves();
     println!("Valves: {:?}",valves);
 
+    valves.push(start);
     net.build_cache(&valves);
+    valves.pop();
 
     let time = std::time::SystemTime::now();
 
@@ -70,48 +72,51 @@ impl<'a> ValveBacktrack<'a> {
         self.path.extend(start);
 
         // Run combinations of valves
-        // array structure uses 2 first positions for elf & elephant target valve
-        // the elf and elephant loops swap valves into position 0 and 1 respectively
-        // [0,1][2...n] = [elf target, elephant target][ valves to swap with positions 0 and 1 ]
-        let mut elf_targets = valves.to_vec();
-        (0..elf_targets.len())
+        // valves visited by Elf
+        (0..valves.len())
             .for_each( |elf| {
-                // next valve combination
-                elf_targets.swap(0, elf);
-                // we need to preserve the valve order for the elf
-                // hence we need to pass a copy to the elephant to iterate over
-                // otherwise we won't generate all potential (elf,elephant) combinations
-                let mut eleph_targets = elf_targets.to_vec();
-                (1..eleph_targets.len())
+                // valves visited by Elephant
+                (0..valves.len())
                     .for_each(|elephant| {
-                        // next valve combination; Note: eleph_targets[0] holds the elf position which is why we start from [1]
-                        eleph_targets.swap(1, elephant);
-                        let [elf_target, eleph_target] = eleph_targets[..2] else { panic!("Ops") };
+                        // Are they both on the same valve ?
+                        if elf == elephant {return;}
 
-                        let elf_cost = self.net.travel_distance(start[0], elf_target).unwrap();
-                        let eleph_cost = self.net.travel_distance(start[1], eleph_target).unwrap();
+                        // pick the target valves to walk towards
+                        let (elf_target,eleph_target) = ( valves[elf], valves[elephant] );
 
-                        // println!("\tElf:{:?}, Eleph:{:?} - {:?}{elf},{:?}{elephant}",
-                        //          (start[0], elf_target, elf_cost, time_left[0]),
-                        //          (start[1], eleph_target, eleph_cost, time_left[1]),
-                        //          elf_targets, eleph_targets
-                        // );
+                        let (elf_cost, eleph_cost) = (
+                            self.net.travel_distance(start[0], elf_target).unwrap(),
+                            self.net.travel_distance(start[1], eleph_target).unwrap()
+                        );
 
-                        // do we have time to move to valve ?
+                        // do we have time to move to target valves ?
                         if elf_cost <= time_left[0] && eleph_cost <= time_left[1] {
 
-                            let elf_time = time_left[0] - elf_cost;
-                            let eleph_time = time_left[1] - eleph_cost;
+                            let (elf_time, eleph_time) = ( time_left[0] - elf_cost, time_left[1] - eleph_cost );
 
+                            // calculate the total pressure resulting from this move
                             let pressure=
                                 self.net.flow[&elf_target].pressure * elf_time
                                     + self.net.flow[&eleph_target].pressure * eleph_time;
-                            // Store the total pressure released up to this point / combination
+
+                            // Store the total pressure released
                             self.pressure += pressure;
-                            // move to the next position with start:target[0], end:targets[1]
+
+                            // remove the elf & elephant targets from the valves to visit
+                            let mut valves_remain= valves.iter()
+                                .enumerate()
+                                .filter_map(|(i,&v)| if i != elf && i != elephant {Some(v)} else { None } )
+                                .collect::<Vec<&str>>();
+
+                            // println!("\tElf:{:?}, Eleph:{:?} - {:?},[{:?},{:?}]",
+                            //          (start[0], elf_target, elf_cost, time_left[0]),
+                            //          (start[1], eleph_target, eleph_cost, time_left[1]),
+                            //          (self.max,self.pressure), (elf_target,eleph_target),&valves_remain
+                            // );
                             self.combinations_elf_elephant(
                                 &[elf_time, eleph_time],
-                                &eleph_targets[..2], &eleph_targets[2..]
+                                &[elf_target, eleph_target],
+                                &valves_remain
                             );
                             // we've finished with this combination hence remove from total pressure
                             self.pressure -= pressure;
@@ -230,10 +235,12 @@ impl<'a> ValveNet<'a> {
     fn build_cache(&self, valves: &[&'a str]) {
         for &a in valves {
             for &b in valves {
-                self.cache.push(
-                    (a,b),
-                    self.travel_distance(a, b).unwrap()
-                );
+                if a != b {
+                    self.cache.push(
+                        (a, b),
+                        self.travel_distance(a, b).unwrap()
+                    );
+                }
             }
         }
 
