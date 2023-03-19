@@ -26,14 +26,13 @@ fn main() {
                 monkey.observe_all(div_product)
                     .into_iter()
                     // .filter_map(|throw| throw)
-                    .all(|throw| {
+                    .all(|throw|
                         throw.map(
                             |(monkey,item)| queue[monkey].push_back(item)
-                        );
-                        true
-                    })
+                        ).is_some()
+                    )
             })
-            .all(|_| true)
+            .all(|run| run)
     });
 
     monkeys.sort_by(|a,b| b.inspect.cmp(&a.inspect));
@@ -176,8 +175,9 @@ impl FromStr for Monkey {
                         m.name = usize::from_str(name.split(' ').last().unwrap().trim()).unwrap();
                     }
                 }
+                true
             })
-            .all(|_| true);
+            .all(|run| run);
 
         Ok(monkey.take())
     }

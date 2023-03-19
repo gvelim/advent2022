@@ -1,6 +1,7 @@
 use std::cell::Cell;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::cmp::Ordering;
 use std::hash::Hash;
+use std::collections::{HashMap,vec_deque::VecDeque};
 use std::str::FromStr;
 
 const INPUT: &str = "Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
@@ -103,7 +104,7 @@ impl<'a> ValveBacktrack<'a> {
                             self.pressure += pressure;
 
                             // remove the elf & elephant targets from the valves to visit
-                            let mut valves_remain= valves.iter()
+                            let valves_remain= valves.iter()
                                 .enumerate()
                                 .filter_map(|(i,&v)| if i != elf && i != elephant {Some(v)} else { None } )
                                 .collect::<Vec<&str>>();
@@ -111,7 +112,7 @@ impl<'a> ValveBacktrack<'a> {
                             // println!("\tElf:{:?}, Eleph:{:?} - {:?},[{:?},{:?}]",
                             //          (start[0], elf_target, elf_cost, time_left[0]),
                             //          (start[1], eleph_target, eleph_cost, time_left[1]),
-                            //          (self.max,self.pressure), (elf_target,eleph_target),&valves_remain
+                            //          (self.max,self.pressure+self.path_pressure(elf_time, &valves_remain)), (elf_target, eleph_target), &valves_remain
                             // );
                             self.combinations_elf_elephant(
                                 &[elf_time, eleph_time],
@@ -158,21 +159,25 @@ impl<'a> ValveBacktrack<'a> {
         self.path.push(start);
 
         // Run combinations of starting valve[0] against target valves, that is, valves[1..n]
-        let mut targets = valves.to_vec();
-        (0..targets.len())
-            .for_each( |i| {
-                // put i'th target always first by swapping
-                targets.swap(0, i);
+        (0..valves.len())
+            .for_each( |elf| {
 
-                let cost = self.net.travel_distance(start, targets[0]).unwrap();
+                let cost = self.net.travel_distance(start, valves[elf]).unwrap();
                 // do we have time to move to valve ?
                 if time_left >= cost {
                     let time = time_left - cost;
-                    let pressure = self.net.flow[ &targets[0] ].pressure * time;
+                    let pressure = self.net.flow[ &valves[elf] ].pressure * time;
                     // Store the total pressure released up to this point / combination
                     self.pressure += pressure;
+
+                    let valves_remain= valves
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(i,&v)| if i != elf { Some(v)} else { None } )
+                        .collect::<Vec<&str>>();
+
                     // move to the next position with start:target[0], end:targets[1]
-                    self.combinations_elf(time, targets[0], &targets[1..]);
+                    self.combinations_elf(time, valves[elf], &valves_remain);
                     // we've finished with this combination hence remove from total pressure
                     self.pressure -= pressure;
 
@@ -190,6 +195,20 @@ impl<'a> ValveBacktrack<'a> {
             });
         // Leaving the valve we entered; finished testing combinations
         self.path.pop();
+    }
+    fn path_pressure(&self, mut time_left: usize, combinations: &[&'a str]) -> usize {
+        combinations
+            .windows(2)
+            .map_while(|valves| {
+                let cost = self.net.travel_distance(valves[0], valves[1]).unwrap();
+                if time_left <  cost {
+                    None
+                } else {
+                    time_left -= cost; // = len-1 steps + open valve
+                    Some( self.net.flow[&valves[1]].pressure * time_left )
+                }
+            })
+            .sum::<usize>()
     }
 }
 
@@ -210,9 +229,10 @@ impl<T> Cache<T> where T: Eq + Hash {
     }
 }
 
+#[derive(Copy, Clone)]
 struct Valve {
     pressure: usize,
-    _open: bool
+    open: bool
 }
 
 struct ValveNet<'a> {
@@ -289,7 +309,54 @@ impl<'a> ValveNet<'a> {
         }
         None
     }
+    fn greedy_search(&'a self, mut time_left:usize, start: &'a str) -> (usize,Vec<&'a str>) {
 
+        let mut queue = VecDeque::new();
+        let mut flow = self.flow.iter()
+            .map(|(key,valve)| (key, valve.clone()))
+            .collect::<HashMap<_,_>>();
+        let mut path = vec![start];
+
+        queue.push_back(start);
+
+        let mut pressure = 0;
+
+        while let Some(valve) = queue.pop_front() {
+
+            flow.get_mut(&valve).unwrap().open = true;
+
+            let mut options = flow.iter()
+                .filter(|&(_,valve)| valve.pressure > 0  && !valve.open )
+                .map(|(&target,_)|
+                    (target, self.travel_distance(&valve, &target).unwrap())
+                )
+                .map(|(&target,cost)|
+                    (target, cost, self.flow[target].pressure/cost)
+                )
+                .collect::<Vec<_>>();
+
+            options.sort_by(|a,b|
+                match a.2.cmp(&b.2) {
+                    res@
+                    (Ordering::Less | Ordering::Greater) => res,
+                    Ordering::Equal => b.1.cmp(&a.1)
+                }
+            );
+
+            if let Some((valve,cost,value)) = options.pop() {
+                path.push(valve);
+                if time_left < cost {
+                    path.extend(options.iter().map(|&(v,..)| v).rev());
+                    return (pressure,path)
+                }
+                time_left -= cost;
+                pressure += self.flow[&valve].pressure * time_left;
+                println!("====> Time: {time_left} got for Option {:?} out of Options: {:?}", (&valve, cost, value, time_left, pressure), options);
+                queue.push_back(valve);
+            }
+        }
+        (pressure,path)
+    }
     fn parse(input: &str) -> ValveNet {
         let (graph, flow) = input.lines()
             .map(|line| {
@@ -302,7 +369,7 @@ impl<'a> ValveNet<'a> {
                 f.entry(key).or_insert(
                     Valve {
                         pressure: usize::from_str(flow).expect("Cannot convert flow"),
-                        _open: false
+                        open: false
                     }
                 );
                 edges.into_iter()
@@ -321,6 +388,31 @@ impl<'a> ValveNet<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
+    #[test]
+    fn test_greedy_vs_backtrack() {
+        let net = ValveNet::parse(INPUT);
+
+        let start = "AA";
+        let valves = net.flow.iter()
+            .filter(|(_, v)| v.pressure > 0)
+            .fold(vec![start], |mut out, (name, _)| {
+                out.push(name);
+                out
+            });
+        println!("Valves: {:?}", valves);
+
+        let mut time = std::time::SystemTime::now();
+        let (max_seed, solution_seed) = net.greedy_search(TIME, start);
+        println!(" - {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
+        println!("Pressure (Greedy): {}\nPath: {:?}", max_seed, solution_seed);
+
+        time = std::time::SystemTime::now();
+        let backtrack = net.backtrack();
+        let pressure = backtrack.path_pressure(TIME, &["AA", "DD", "BB", "JJ", "HH", "EE", "CC"]);
+        println!(" - {:.2?},", std::time::SystemTime::now().duration_since(time).unwrap());
+        println!("Pressure (Backtrack): {}", pressure);
+        assert_eq!(pressure,1651);
+    }
     #[test]
     fn test_sample_set_elf() {
         // Found 1651, ["AA", "DD", "BB", "JJ", "HH", "EE", "CC"]
