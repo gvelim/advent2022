@@ -23,7 +23,7 @@ impl Path {
     fn new(path:String) -> Path {
         Path(path)
     }
-    fn append(&self, dir: &String) -> Path {
+    fn append(&self, dir: &str) -> Path {
         Path(format!("{}{}",self.0,dir))
     }
 }
@@ -58,19 +58,19 @@ impl Tree {
     fn totals(&self) -> Vec<(Path, usize)> {
         self.totals.take()
     }
-    fn parse_history(history: &[LineType]) -> Tree {
+    fn parse_history(history: impl Iterator<Item=LineType>) -> Tree {
         use LineType::*;
 
         let mut map = HashMap::<Path,Node>::new();
         let mut path = Path::new("".to_string());
 
-        history.iter()
+        history
             // .inspect(|line| println!("{:?}",line))
             .for_each(|lt| {
                 match lt {
                     Cmd(CommandType::Cd(dir)) if dir.contains("..") => path = map[&path].parent.clone(),
                     Cmd(CommandType::Cd(dir)) => {
-                        let cpath = path.append(dir);
+                        let cpath = path.append(dir.as_str());
                         println!("{:?}",cpath);
                         map.entry(cpath.clone())
                             .or_insert(Node { parent: path.clone(), content: Vec::new(), size: 0 });
@@ -79,7 +79,7 @@ impl Tree {
                     Rst(res) => {
                         let node = map.get_mut(&path).unwrap();
                         node.content.push(res.clone());
-                        if let &ResultType::File(_,fsize) = res {
+                        if let ResultType::File(_,fsize) = res {
                             node.size += fsize;
                         }
                     }
@@ -102,7 +102,7 @@ impl Tree {
 
 struct History();
 impl History {
-    fn parse(history:&str) -> Vec<LineType> {
+    fn iterator(history:&str) -> impl Iterator<Item=LineType> + '_{
         history.lines()
             .filter_map(|e| {
                 let p:Vec<_> = e.split(' ').collect();
@@ -116,8 +116,6 @@ impl History {
                     _ => Some(LineType::Rst(ResultType::File(p[1].to_string(), usize::from_str(p[0]).unwrap())))
                 }
             })
-            // .inspect(|e| println!("{:?}",e))
-            .collect::<Vec<_>>()
     }
 }
 
@@ -125,9 +123,9 @@ fn main() {
 
     let history = std::fs::read_to_string("src/bin/day7_input.txt").expect("");
 
-    let hst_lines = History::parse(history.as_str());
-
-    let tree = Tree::parse_history(&hst_lines);
+    let tree = Tree::parse_history(
+        History::iterator(history.as_str())
+    );
 
     tree.calc_dirs_totals(&Path::new("/".to_string()));
     let dirs = tree.totals();
