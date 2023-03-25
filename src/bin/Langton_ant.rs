@@ -6,7 +6,7 @@ fn main() {
     let mut board = Board::new();
     let mut ant = Ant::land((0, 0));
 
-    (0..400).for_each(|_| {
+    (0..500).for_each(|_| {
         board.step_run(&mut ant);
         println!("{board}");
     });
@@ -29,10 +29,9 @@ struct Ant {
     pos: (isize,isize),
     orient: usize
 }
-
 impl Ant {
     fn land(pos: (isize,isize)) -> Ant {
-        Ant { pos, orient: 0 }
+        Ant { pos, orient: 1 }
     }
     fn turn_right(&mut self) -> Direction {
         self.orient = match self.orient {
@@ -50,17 +49,20 @@ impl Ant {
         };
         DIRECTION[self.orient]
     }
-    fn step_run(&mut self, board: &mut Board) -> (isize, isize) {
-        let orient = match board.square_colour(self.pos) {
-            Square::White => self.turn_right(),
-            Square::Black => self.turn_left()
-        };
-        match orient {
+    fn step(&mut self, dir: Direction) {
+        match dir {
             Direction::Right => self.pos.0 += 1,
             Direction::Down => self.pos.1 -= 1,
             Direction::Left => self.pos.0 -= 1,
             Direction::Up => self.pos.1 += 1
         }
+    }
+    fn step_run(&mut self, board: &mut Board) -> (isize, isize) {
+        let dir = match board.square_colour(self.pos) {
+            Square::White => self.turn_right(),
+            Square::Black => self.turn_left()
+        };
+        self.step( dir );
         self.pos
     }
 }
@@ -75,10 +77,6 @@ impl Board {
         Board{ border:(-2,2,2,-2), map:HashMap::new() }
     }
     fn square_colour(&mut self, p: (isize, isize)) -> Square {
-        self.border.0 = min(p.0,self.border.0);
-        self.border.1 = max(p.1,self.border.1);
-        self.border.2 = max(p.0,self.border.2);
-        self.border.3 = min(p.1,self.border.3);
         *self.map.entry(p).or_insert(Square::default())
     }
     fn inverse_square(&mut self, p: (isize, isize)) {
@@ -90,9 +88,15 @@ impl Board {
         }
     }
     fn step_run(&mut self, ant:&mut Ant) {
-        let pos = ant.pos;
+        let p = ant.pos;
+
+        self.border.0 = min(p.0,self.border.0);
+        self.border.1 = max(p.1,self.border.1);
+        self.border.2 = max(p.0,self.border.2);
+        self.border.3 = min(p.1,self.border.3);
+
         ant.step_run(self);
-        self.inverse_square(pos);
+        self.inverse_square(p);
     }
 }
 
