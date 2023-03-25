@@ -8,7 +8,7 @@ fn main() {
 
     (0..500).for_each(|_| {
         board.step_run(&mut ant);
-        println!("{board}");
+        board.draw();
     });
 
     println!("\n{}",board);
@@ -74,7 +74,7 @@ struct Board {
 }
 impl Board {
     fn new() -> Board {
-        Board{ border:(-2,2,2,-2), map:HashMap::new() }
+        Board{ border:(-1,1,1,-1), map:HashMap::new() }
     }
     fn square_colour(&mut self, p: (isize, isize)) -> Square {
         *self.map.entry(p).or_insert(Square::default())
@@ -97,6 +97,9 @@ impl Board {
 
         ant.step_run(self);
         self.inverse_square(p);
+    }
+    fn draw(&self) {
+        println!("{self}");
     }
 }
 
