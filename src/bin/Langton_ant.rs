@@ -1,21 +1,68 @@
 use std::cmp::{max, min};
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 
 fn main() {
     let mut board = Board::new();
-    let mut ant = Ant::land(&mut board,(0,0));
+    let mut ant = Ant::land((0, 0));
 
-    ant.take(10)
-        .for_each(|x| {
-            println!("{:?}",x);
-        });
-    print!("{:?}",board.border);
+    (0..600).for_each(|_| {
+        board.step_run(&mut ant);
+        println!("{board}");
+    });
+
+    println!("\n{}",board);
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Square { White, Black }
 impl Default for Square {
     fn default() -> Self { Square::White }
+}
+
+#[derive(Copy, Clone, Debug)]
+enum Direction { Right, Down, Left, Up }
+
+const DIRECTION: [Direction;4] = [Direction::Down, Direction::Left, Direction::Up, Direction::Right];
+#[derive(Debug)]
+struct Ant {
+    pos: (isize,isize),
+    orient: usize
+}
+
+impl Ant {
+    fn land(pos: (isize,isize)) -> Ant {
+        Ant { pos, orient: 0 }
+    }
+    fn turn_right(&mut self) -> Direction {
+        self.orient = match self.orient {
+            0..=2 => self.orient + 1,
+            3 => 0,
+            _ => unreachable!()
+        };
+        DIRECTION[self.orient]
+    }
+    fn turn_left(&mut self) -> Direction {
+        self.orient = match self.orient {
+            0 => 3,
+            1..=3 => self.orient - 1,
+            _ => unreachable!()
+        };
+        DIRECTION[self.orient]
+    }
+    fn step_run(&mut self, board: &mut Board) -> (isize, isize) {
+        let orient = match board.square_colour(self.pos) {
+            Square::White => self.turn_right(),
+            Square::Black => self.turn_left()
+        };
+        match orient {
+            Direction::Right => self.pos.0 += 1,
+            Direction::Down => self.pos.1 -= 1,
+            Direction::Left => self.pos.0 -= 1,
+            Direction::Up => self.pos.1 += 1
+        }
+        self.pos
+    }
 }
 
 #[derive(Debug)]
@@ -42,58 +89,29 @@ impl Board {
             }
         }
     }
+    fn step_run(&mut self, ant:&mut Ant) {
+        let pos = ant.pos;
+        ant.step_run(self);
+        self.inverse_square(pos);
+    }
 }
 
-#[derive(Copy, Clone, Debug)]
-enum Orient { Right, Down, Left, Up }
-const ORIENTATION: [Orient;4] = [Orient::Down,Orient::Left,Orient::Up,Orient::Right];
+impl Display for Board {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let area_w: isize = 20;
+        let area_h : isize = 20;
 
-#[derive(Debug)]
-struct Ant<'a> {
-    board: &'a mut Board,
-    pos: (isize,isize),
-    orient: usize
-}
-impl Ant<'_> {
-    fn land(board: &mut Board, pos: (isize,isize)) -> Ant {
-        Ant { board, pos, orient: 0 }
-    }
-    fn turn_right(&mut self) -> Orient {
-        self.orient = match self.orient {
-            0..=2 => self.orient + 1,
-            3 => 0,
-            _ => unreachable!()
-        };
-        self.step_move(ORIENTATION[self.orient] );
-        ORIENTATION[self.orient]
-    }
-    fn turn_left(&mut self) -> Orient {
-        self.orient = match self.orient {
-            0 => 3,
-            1..=3 => self.orient - 1,
-            _ => unreachable!()
-        };
-        self.step_move(ORIENTATION[self.orient] );
-        ORIENTATION[self.orient]
-    }
-    fn step_move(&mut self, orient:Orient) -> (isize, isize) {
-        self.board.inverse_square(self.pos);
-        match orient {
-            Orient::Right => self.pos.0 += 1,
-            Orient::Down => self.pos.1 -= 1,
-            Orient::Left => self.pos.0 -= 1,
-            Orient::Up => self.pos.1 += 1
+        for y in 0..area_h {
+            for x in 0..area_w {
+                write!(f,"{:3}",
+                       match self.map.get(&(x-10,y-10)) {
+                           None => '.',
+                           Some(&sqr) => if sqr == Square::Black { 'B' } else { 'w' }
+                       }
+                )?
+            }
+            writeln!(f)?
         }
-        self.pos
-    }
-}
-
-impl Iterator for Ant<'_> {
-    type Item = Orient;
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.board.square_colour(self.pos) {
-            Square::White => Some(self.turn_right()),
-            Square::Black => Some(self.turn_left())
-        }
+        Ok(())
     }
 }
