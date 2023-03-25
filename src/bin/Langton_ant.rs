@@ -6,7 +6,7 @@ fn main() {
     let mut board = Board::new();
     let mut ant = Ant::land((0, 0));
 
-    (0..600).for_each(|_| {
+    (0..400).for_each(|_| {
         board.step_run(&mut ant);
         println!("{board}");
     });
@@ -72,13 +72,13 @@ struct Board {
 }
 impl Board {
     fn new() -> Board {
-        Board{ border:(0,0,0,0), map:HashMap::new() }
+        Board{ border:(-2,2,2,-2), map:HashMap::new() }
     }
     fn square_colour(&mut self, p: (isize, isize)) -> Square {
         self.border.0 = min(p.0,self.border.0);
+        self.border.1 = max(p.1,self.border.1);
         self.border.2 = max(p.0,self.border.2);
-        self.border.1 = min(p.1,self.border.1);
-        self.border.3 = max(p.1,self.border.3);
+        self.border.3 = min(p.1,self.border.3);
         *self.map.entry(p).or_insert(Square::default())
     }
     fn inverse_square(&mut self, p: (isize, isize)) {
@@ -98,13 +98,12 @@ impl Board {
 
 impl Display for Board {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let area_w: isize = 20;
-        let area_h : isize = 20;
 
-        for y in 0..area_h {
-            for x in 0..area_w {
+        writeln!(f,"{:?}", (&self.border))?;
+        for y in self.border.3-1 ..= self.border.1+1 {
+            for x in self.border.0-1 ..= self.border.2+1 {
                 write!(f,"{:3}",
-                       match self.map.get(&(x-10,y-10)) {
+                       match self.map.get(&(x,y)) {
                            None => '.',
                            Some(&sqr) => if sqr == Square::Black { 'B' } else { 'w' }
                        }
