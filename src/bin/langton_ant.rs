@@ -10,8 +10,6 @@ fn main() {
         board.step_run(&mut ant);
         board.draw();
     });
-
-    println!("\n{}",board);
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -22,8 +20,8 @@ impl Default for Square {
 
 #[derive(Copy, Clone, Debug)]
 enum Direction { Right, Down, Left, Up }
-
 const DIRECTION: [Direction;4] = [Direction::Down, Direction::Left, Direction::Up, Direction::Right];
+
 #[derive(Debug)]
 struct Ant {
     pos: (isize,isize),
