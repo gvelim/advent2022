@@ -121,18 +121,18 @@ impl Board {
     }
     fn draw(&self, ctx:&mut BTerm) {
         ctx.set_scale(
-            f32::min(80f32.div((self.area.0+3) as f32),40f32.div((self.area.1+3) as f32)),
+            f32::min(80f32.div((self.area.0+4) as f32),40f32.div((self.area.1+4) as f32)),
             40, 25,
         );
         for y in self.border.3-1 ..= self.border.1+1 {
             for x in self.border.0-1 ..= self.border.2+1 {
-                let (sqr, char) =
+                let (colour, char) =
                     match self.map.get(&(x,y)) {
-                        Some(Square::Black) => (GRAY1,'B'),
-                        Some(Square::White) => (WHITE, 'w'),
+                        Some(Square::Black) => (BLACK,'B'),
+                        Some(Square::White) => (WHITE, 'W'),
                         None => ( GREEN, '.' )
                     };
-                ctx.set(x+40, y+25, sqr, BLUE, to_cp437(char) );
+                ctx.set(x+40, y+25, colour, BLUE, to_cp437(char) );
             }
         }
         let (x,y) = self.ant.pos;
