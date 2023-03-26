@@ -1,22 +1,18 @@
 use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::ops::Div;
 use bracket_lib::prelude::*;
 
 fn main() -> BResult<()> {
     let board = Board::init();
 
-    let ctx = BTermBuilder::simple80x50()
-        .with_fps_cap(120.0)
-        .with_title("Langton's Ant")
+    let ctx = BTermBuilder::simple(80,50)?
+        .with_fps_cap(60f32)
+        .with_title("Langton's Ant - Press 'Q' to exit")
         .build()?;
 
     main_loop(ctx, board)
-
-    // (0..500).for_each(|_| {
-    //     board.tick();
-    //     println!("{}",board);
-    // });
 }
 
 impl GameState for Board {
@@ -46,7 +42,7 @@ struct Ant {
 }
 impl Ant {
     fn init(pos: (isize, isize)) -> Ant {
-        Ant { pos, orient: 1 }
+        Ant { pos, orient: 0 }
     }
     fn turn_right(&mut self) -> Direction {
         self.orient = match self.orient {
@@ -85,6 +81,7 @@ impl Ant {
 #[derive(Debug)]
 struct Board {
     border: (isize,isize,isize,isize),
+    area: (isize,isize),
     map: HashMap<(isize,isize),Square>,
     ant: Ant
 }
@@ -92,6 +89,7 @@ impl Board {
     fn init() -> Board {
         Board {
             border:(-1,1,1,-1),
+            area: (3,3),
             map:HashMap::new(),
             ant: Ant::init((0, 0))
         }
@@ -114,33 +112,36 @@ impl Board {
         self.border.1 = max(p.1,self.border.1);
         self.border.2 = max(p.0,self.border.2);
         self.border.3 = min(p.1,self.border.3);
+        self.area.0 = self.border.2 - self.border.0;
+        self.area.1 = self.border.1 - self.border.3;
 
         let sqr = self.square_colour(p);
         self.ant.tick(sqr);
         self.inverse_square(p);
     }
     fn draw(&self, ctx:&mut BTerm) {
-
+        ctx.set_scale(
+            f32::min(80f32.div((self.area.0+3) as f32),40f32.div((self.area.1+3) as f32)),
+            40, 25,
+        );
         for y in self.border.3-1 ..= self.border.1+1 {
             for x in self.border.0-1 ..= self.border.2+1 {
                 let (sqr, char) =
-                    if let Some(&sqr) = self.map.get(&(x,y)) {
-                        (
-                            if sqr == Square::Black { GRAY1 } else { WHITE },
-                            if sqr == Square::Black { 'B' } else { 'w' }
-                        )
-                    } else {
-                        ( GREEN1, '.' )
+                    match self.map.get(&(x,y)) {
+                        Some(Square::Black) => (GRAY1,'B'),
+                        Some(Square::White) => (WHITE, 'w'),
+                        None => ( GREEN, '.' )
                     };
                 ctx.set(x+40, y+25, sqr, BLUE, to_cp437(char) );
             }
         }
+        let (x,y) = self.ant.pos;
+        ctx.set( x+40, y+25, RED, BLUE, to_cp437('@'));
     }
 }
 
 impl Display for Board {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-
         writeln!(f,"{:?}", (&self.border))?;
         for y in self.border.3-1 ..= self.border.1+1 {
             for x in self.border.0-1 ..= self.border.2+1 {
