@@ -1,15 +1,33 @@
 use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use bracket_lib::color;
+use bracket_lib::prelude::*;
 
-fn main() {
-    let mut board = Board::new();
-    let mut ant = Ant::land((0, 0));
+fn main() -> BResult<()> {
+    let board = Board::init();
 
-    (0..500).for_each(|_| {
-        board.step_run(&mut ant);
-        board.draw();
-    });
+    let ctx = BTermBuilder::simple80x50()
+        .with_fps_cap(120.0)
+        .with_title("Langton's Ant")
+        .build()?;
+
+    main_loop(ctx, board)
+
+    // (0..500).for_each(|_| {
+    //     board.tick();
+    //     println!("{}",board);
+    // });
+}
+
+impl GameState for Board {
+    fn tick(&mut self, ctx: &mut BTerm) {
+        self.tick();
+        self.draw(ctx);
+        if ctx.key == Some(VirtualKeyCode::Q) {
+            ctx.quit();
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -28,7 +46,7 @@ struct Ant {
     orient: usize
 }
 impl Ant {
-    fn land(pos: (isize,isize)) -> Ant {
+    fn init(pos: (isize, isize)) -> Ant {
         Ant { pos, orient: 1 }
     }
     fn turn_right(&mut self) -> Direction {
@@ -55,8 +73,8 @@ impl Ant {
             Direction::Up => self.pos.1 += 1
         }
     }
-    fn step_run(&mut self, board: &mut Board) -> (isize, isize) {
-        let dir = match board.square_colour(self.pos) {
+    fn tick(&mut self, sqr: Square) -> (isize, isize) {
+        let dir = match sqr {
             Square::White => self.turn_right(),
             Square::Black => self.turn_left()
         };
@@ -68,11 +86,16 @@ impl Ant {
 #[derive(Debug)]
 struct Board {
     border: (isize,isize,isize,isize),
-    map: HashMap<(isize,isize),Square>
+    map: HashMap<(isize,isize),Square>,
+    ant: Ant
 }
 impl Board {
-    fn new() -> Board {
-        Board{ border:(-1,1,1,-1), map:HashMap::new() }
+    fn init() -> Board {
+        Board {
+            border:(-1,1,1,-1),
+            map:HashMap::new(),
+            ant: Ant::init((0, 0))
+        }
     }
     fn square_colour(&mut self, p: (isize, isize)) -> Square {
         *self.map.entry(p).or_insert(Square::default())
@@ -85,19 +108,34 @@ impl Board {
             }
         }
     }
-    fn step_run(&mut self, ant:&mut Ant) {
-        let p = ant.pos;
+    fn tick(&mut self) {
+        let p = self.ant.pos;
 
         self.border.0 = min(p.0,self.border.0);
         self.border.1 = max(p.1,self.border.1);
         self.border.2 = max(p.0,self.border.2);
         self.border.3 = min(p.1,self.border.3);
 
-        ant.step_run(self);
+        let sqr = self.square_colour(p);
+        self.ant.tick(sqr);
         self.inverse_square(p);
     }
-    fn draw(&self) {
-        println!("{self}");
+    fn draw(&self, ctx:&mut BTerm) {
+
+        for y in self.border.3-1 ..= self.border.1+1 {
+            for x in self.border.0-1 ..= self.border.2+1 {
+                let (sqr, char) =
+                    if let Some(&sqr) = self.map.get(&(x,y)) {
+                        (
+                            if sqr == Square::Black { GRAY1 } else { WHITE },
+                            if sqr == Square::Black { 'B' } else { 'w' }
+                        )
+                    } else {
+                        ( GREEN1, '.' )
+                    };
+                ctx.set(x+40, y+25, sqr, BLUE, to_cp437(char) );
+            }
+        }
     }
 }
 
