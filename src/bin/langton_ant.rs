@@ -1,14 +1,16 @@
 use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
-use std::ops::Div;
+use std::iter::Cycle;
+use std::ops::{Div, Range};
 use bracket_lib::prelude::*;
 
 fn main() -> BResult<()> {
     let board = Board::init();
 
-    let ctx = BTermBuilder::simple(80,50)?
-        .with_fps_cap(60f32)
+    let ctx = BTermBuilder::simple80x50()
+        .with_automatic_console_resize(true)
+        .with_fps_cap(120f32)
         .with_title("Langton's Ant - Press 'Q' to exit")
         .build()?;
 
@@ -38,27 +40,19 @@ const DIRECTION: [Direction;4] = [Direction::Down, Direction::Left, Direction::U
 #[derive(Debug)]
 struct Ant {
     pos: (isize,isize),
-    orient: usize
+    orient: Cycle<Range<usize>>
 }
 impl Ant {
     fn init(pos: (isize, isize)) -> Ant {
-        Ant { pos, orient: 0 }
+        Ant { pos, orient: (0..4).cycle() }
     }
     fn turn_right(&mut self) -> Direction {
-        self.orient = match self.orient {
-            0..=2 => self.orient + 1,
-            3 => 0,
-            _ => unreachable!()
-        };
-        DIRECTION[self.orient]
+        DIRECTION[self.orient.next().unwrap()]
     }
     fn turn_left(&mut self) -> Direction {
-        self.orient = match self.orient {
-            0 => 3,
-            1..=3 => self.orient - 1,
-            _ => unreachable!()
-        };
-        DIRECTION[self.orient]
+        self.orient.next();
+        self.orient.next();
+        DIRECTION[self.orient.next().unwrap()]
     }
     fn step(&mut self, dir: Direction) {
         match dir {
@@ -88,7 +82,7 @@ struct Board {
 impl Board {
     fn init() -> Board {
         Board {
-            border:(-1,1,1,-1),
+            border:(-1,-1,1,1),
             area: (3,3),
             map:HashMap::new(),
             ant: Ant::init((0, 0))
@@ -109,11 +103,11 @@ impl Board {
         let p = self.ant.pos;
 
         self.border.0 = min(p.0,self.border.0);
-        self.border.1 = max(p.1,self.border.1);
+        self.border.1 = min(p.1,self.border.1);
         self.border.2 = max(p.0,self.border.2);
-        self.border.3 = min(p.1,self.border.3);
-        self.area.0 = self.border.2 - self.border.0;
-        self.area.1 = self.border.1 - self.border.3;
+        self.border.3 = max(p.1,self.border.3);
+        self.area.0 = self.border.2 - self.border.0 + 1;
+        self.area.1 = self.border.3 - self.border.1 + 1;
 
         let sqr = self.square_colour(p);
         self.ant.tick(sqr);
@@ -121,22 +115,22 @@ impl Board {
     }
     fn draw(&self, ctx:&mut BTerm) {
         ctx.set_scale(
-            f32::min(80f32.div((self.area.0+3) as f32),40f32.div((self.area.1+3) as f32)),
-            40, 25,
+            f32::min(80f32.div((self.area.0) as f32),50f32.div((self.area.1) as f32)),
+            80,  50
         );
-        for y in self.border.3-1 ..= self.border.1+1 {
+        for y in self.border.1-1 ..= self.border.3+1 {
             for x in self.border.0-1 ..= self.border.2+1 {
-                let (sqr, char) =
+                let (colour, char) =
                     match self.map.get(&(x,y)) {
-                        Some(Square::Black) => (GRAY1,'B'),
-                        Some(Square::White) => (WHITE, 'w'),
+                        Some(Square::Black) => (BLACK,'B'),
+                        Some(Square::White) => (WHITE, 'W'),
                         None => ( GREEN, '.' )
                     };
-                ctx.set(x+40, y+25, sqr, BLUE, to_cp437(char) );
+                ctx.set(x+80, y+50, colour, BLUE, to_cp437(char) );
             }
         }
         let (x,y) = self.ant.pos;
-        ctx.set( x+40, y+25, RED, BLUE, to_cp437('@'));
+        ctx.set( x+80, y+50, RED, BLUE, to_cp437('@'));
     }
 }
 
