@@ -10,7 +10,7 @@ fn main() -> BResult<()> {
 
     let ctx = BTermBuilder::simple(160, 100)?
         .with_sparse_console(160, 100, "terminal8x8.png")
-        .with_fps_cap(10f32)
+        .with_fps_cap(60f32)
         .with_title("Langton's Ant - Press 'Q' to exit")
         .build()?;
 
@@ -117,7 +117,7 @@ impl Board {
     fn draw(&self, ctx:&mut BTerm) {
         ctx.set_active_console(0);
         ctx.set_scale(
-            f32::min(160f32.div((self.area.0+3) as f32),100f32.div((self.area.1+3) as f32)),
+            f32::min(150f32.div((self.area.0+3) as f32),90f32.div((self.area.1+3) as f32)),
             (80 + (self.border.0 + self.border.2)) as i32, (50 + (self.border.1 + self.border.3)) as i32
         );
         for y in self.border.1-1 ..= self.border.3+1 {
