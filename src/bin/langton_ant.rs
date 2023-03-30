@@ -9,7 +9,8 @@ fn main() -> BResult<()> {
     let board = Board::init();
 
     let ctx = BTermBuilder::simple(160, 100)?
-        .with_sparse_console(160, 100, "terminal8x8.png")
+        .with_simple_console(640,480,"terminal8x8.png")
+        .with_sparse_console(80, 50, "terminal8x8.png")
         .with_fps_cap(30f32)
         .with_title("Langton's Ant - Press 'Q':exit, 'A':Ant")
         .build()?;
@@ -130,10 +131,10 @@ impl Board {
         })
     }
     fn draw(&self, ctx:&mut BTerm) {
-        ctx.set_active_console(0);
+        ctx.set_active_console(1);
         ctx.set_scale(
-            f32::min(150f32.div((self.area.0+3) as f32),90f32.div((self.area.1+3) as f32)),
-            (80 + (self.border.0 + self.border.2)) as i32, (50 + (self.border.1 + self.border.3)) as i32
+            f32::min(630f32.div((self.area.0+3) as f32),470f32.div((self.area.1+3) as f32)),
+            (320 + (self.border.0 + self.border.2)) as i32, (240 + (self.border.1 + self.border.3)) as i32
         );
         for y in self.border.1-1 ..= self.border.3+1 {
             for x in self.border.0-1 ..= self.border.2+1 {
@@ -143,18 +144,19 @@ impl Board {
                         Some(Square::White) => (WHITE, 'W'),
                         None => (GREEN, '.')
                     };
-                ctx.set(x+80, y+50, colour, BLUE, to_cp437(char) );
+                ctx.set(x+320, y+240, colour, BLUE, to_cp437(char) );
             }
         }
         self.ant.iter().for_each(|ant| {
             let (x,y) = ant.pos;
-            ctx.set( x+80, y+50, RED, BLUE, to_cp437('@'));
+            ctx.set( x+320, y+240, RED, BLUE, to_cp437('@'));
         });
-        ctx.set_active_console(1);
+        ctx.set_active_console(2);
         ctx.print(0,0,format!("Corners: {:?}",self.border));
         ctx.print(0,2,format!("Area: {:?}",self.area));
         ctx.print(0,4,format!("Population: {:?}",self.ant.len()));
-        ctx.print(0,6,format!("FPS: {:?}",ctx.fps));
+        ctx.print(0,47,format!("FPS: {:?}",ctx.fps));
+        ctx.print(0,49,format!("Render time: {:?}(ms)",ctx.frame_time_ms));
     }
 }
 
