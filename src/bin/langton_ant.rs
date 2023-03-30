@@ -140,16 +140,18 @@ impl Board {
             for x in self.border.0-1 ..= self.border.2+1 {
                 let (colour, char) =
                     match self.map.get(&(x, y)) {
-                        Some(Square::Black) => (BLACK, 'B'),
-                        Some(Square::White) => (WHITE, 'W'),
-                        None => (GREEN, '.')
+                        Some(Square::Black) => (BLACK, 'O'),
+                        Some(Square::White) => (WHITE, 'O'),
+                        None => (BLUE, '.')
                     };
-                ctx.set(x+320, y+240, colour, BLUE, to_cp437(char) );
+                ctx.set(x+320, y+240, colour, colour, to_cp437(char) );
             }
         }
         self.ant.iter().for_each(|ant| {
             let (x,y) = ant.pos;
-            ctx.set( x+320, y+240, RED, BLUE, to_cp437('@'));
+            ctx.set( x+320, y+240, RED,
+                     self.map.get(&(x,y)).map(|&sqr| match sqr { Square::Black => BLACK, _ =>WHITE } ).unwrap_or(BLUE),
+                     to_cp437('@'));
         });
         ctx.set_active_console(2);
         ctx.print(0,0,format!("Corners: {:?}",self.border));
