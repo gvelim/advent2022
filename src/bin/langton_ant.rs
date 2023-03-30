@@ -1,8 +1,8 @@
 use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
-use std::iter::Cycle;
-use std::ops::{Div, Range};
+use std::ops::Div;
+use std::vec;
 use bracket_lib::prelude::*;
 
 fn main() -> BResult<()> {
@@ -10,8 +10,8 @@ fn main() -> BResult<()> {
 
     let ctx = BTermBuilder::simple(160, 100)?
         .with_sparse_console(160, 100, "terminal8x8.png")
-        .with_fps_cap(60f32)
-        .with_title("Langton's Ant - Press 'Q' to exit")
+        .with_fps_cap(30f32)
+        .with_title("Langton's Ant - Press 'Q':exit, 'A':Ant")
         .build()?;
 
     main_loop(ctx, board)
@@ -21,8 +21,10 @@ impl GameState for Board {
     fn tick(&mut self, ctx: &mut BTerm) {
         self.tick();
         self.draw(ctx);
-        if ctx.key == Some(VirtualKeyCode::Q) {
-            ctx.quit();
+        match ctx.key {
+            Some(VirtualKeyCode::Q) => ctx.quit(),
+            Some(VirtualKeyCode::A) => self.inject_ant(),
+            _ => {}
         }
     }
 }
@@ -40,19 +42,27 @@ const DIRECTION: [Direction;4] = [Direction::Down, Direction::Left, Direction::U
 #[derive(Debug)]
 struct Ant {
     pos: (isize,isize),
-    orient: Cycle<Range<usize>>
+    orient: usize
 }
 impl Ant {
     fn init(pos: (isize, isize)) -> Ant {
-        Ant { pos, orient: (0..4).cycle() }
+        Ant { pos, orient: 1 }
     }
     fn turn_right(&mut self) -> Direction {
-        DIRECTION[self.orient.next().unwrap()]
+        self.orient = match self.orient {
+            0..=2 => self.orient + 1,
+            3 => 0,
+            _ => unreachable!()
+        };
+        DIRECTION[self.orient]
     }
     fn turn_left(&mut self) -> Direction {
-        self.orient.next();
-        self.orient.next();
-        DIRECTION[self.orient.next().unwrap()]
+        self.orient = match self.orient {
+            0 => 3,
+            1..=3 => self.orient - 1,
+            _ => unreachable!()
+        };
+        DIRECTION[self.orient]
     }
     fn step(&mut self, dir: Direction) {
         match dir {
@@ -77,7 +87,7 @@ struct Board {
     border: (isize,isize,isize,isize),
     area: (isize,isize),
     map: HashMap<(isize,isize),Square>,
-    ant: Ant
+    ant: Vec<Ant>
 }
 impl Board {
     fn init() -> Board {
@@ -85,8 +95,11 @@ impl Board {
             border:(-1,-1,1,1),
             area: (3,3),
             map:HashMap::new(),
-            ant: Ant::init((0, 0))
+            ant: vec![Ant::init((0, 0))]
         }
+    }
+    fn inject_ant(&mut self) {
+        self.ant.push(Ant::init((0, 0)))
     }
     fn square_colour(&mut self, p: (isize, isize)) -> Square {
         *self.map.entry(p).or_insert(Square::default())
@@ -108,11 +121,13 @@ impl Board {
         self.area.1 = self.border.3 - self.border.1 + 1;
     }
     fn tick(&mut self) {
-        let p = self.ant.pos;
-        self.capture_point(p);
-        let sqr = self.square_colour(p);
-        self.ant.tick(sqr);
-        self.inverse_square(p);
+        (0..self.ant.len()).for_each(|i|{
+            let p = self.ant[i].pos;
+            self.capture_point(p);
+            let sqr = self.square_colour(p);
+            self.ant[i].tick(sqr);
+            self.inverse_square(p);
+        })
     }
     fn draw(&self, ctx:&mut BTerm) {
         ctx.set_active_console(0);
@@ -123,23 +138,23 @@ impl Board {
         for y in self.border.1-1 ..= self.border.3+1 {
             for x in self.border.0-1 ..= self.border.2+1 {
                 let (colour, char) =
-                if x == self.ant.pos.0 && y == self.ant.pos.1 {
-                    (RED, '@')
-                } else {
                     match self.map.get(&(x, y)) {
                         Some(Square::Black) => (BLACK, 'B'),
                         Some(Square::White) => (WHITE, 'W'),
                         None => (GREEN, '.')
-                    }
-                };
+                    };
                 ctx.set(x+80, y+50, colour, BLUE, to_cp437(char) );
             }
         }
-        // let (x,y) = self.ant.pos;
-        // ctx.set( x+80, y+50, RED, BLUE, to_cp437('@'));
+        self.ant.iter().for_each(|ant| {
+            let (x,y) = ant.pos;
+            ctx.set( x+80, y+50, RED, BLUE, to_cp437('@'));
+        });
         ctx.set_active_console(1);
-        ctx.print(0,0,format!("Border: {:?}",self.border));
+        ctx.print(0,0,format!("Corners: {:?}",self.border));
         ctx.print(0,2,format!("Area: {:?}",self.area));
+        ctx.print(0,4,format!("Population: {:?}",self.ant.len()));
+        ctx.print(0,6,format!("FPS: {:?}",ctx.fps));
     }
 }
 
