@@ -10,7 +10,7 @@ fn main() -> BResult<()> {
 
     let ctx = BTermBuilder::simple(160, 100)?
         .with_simple_console(640,480,"terminal8x8.png")
-        .with_sparse_console(80, 50, "terminal8x8.png")
+        .with_sparse_console_no_bg(80, 50, "terminal8x8.png")
         .with_fps_cap(30f32)
         .with_title("Langton's Ant - Press 'Q':exit, 'A':Ant")
         .build()?;
@@ -22,6 +22,7 @@ impl GameState for Board {
     fn tick(&mut self, ctx: &mut BTerm) {
         self.tick();
         self.draw(ctx);
+        self.draw_stats(ctx);
         match ctx.key {
             Some(VirtualKeyCode::Q) => ctx.quit(),
             Some(VirtualKeyCode::A) => self.inject_ant(),
@@ -42,11 +43,11 @@ const DIRECTION: [Direction;4] = [Direction::Down, Direction::Left, Direction::U
 
 #[derive(Debug)]
 struct Ant {
-    pos: (isize,isize),
+    pos: (i32,i32),
     orient: usize
 }
 impl Ant {
-    fn init(pos: (isize, isize)) -> Ant {
+    fn init(pos: (i32, i32)) -> Ant {
         Ant { pos, orient: 1 }
     }
     fn turn_right(&mut self) -> Direction {
@@ -73,7 +74,7 @@ impl Ant {
             Direction::Up => self.pos.1 += 1
         }
     }
-    fn tick(&mut self, sqr: Square) -> (isize, isize) {
+    fn tick(&mut self, sqr: Square) -> (i32, i32) {
         let dir = match sqr {
             Square::White => self.turn_right(),
             Square::Black => self.turn_left()
@@ -85,9 +86,9 @@ impl Ant {
 
 #[derive(Debug)]
 struct Board {
-    border: (isize,isize,isize,isize),
-    area: (isize,isize),
-    map: HashMap<(isize,isize),Square>,
+    border: (i32,i32,i32,i32),
+    area: (i32,i32),
+    map: HashMap<(i32,i32),Square>,
     ant: Vec<Ant>
 }
 impl Board {
@@ -102,10 +103,10 @@ impl Board {
     fn inject_ant(&mut self) {
         self.ant.push(Ant::init((0, 0)))
     }
-    fn square_colour(&mut self, p: (isize, isize)) -> Square {
+    fn square_colour(&mut self, p: (i32, i32)) -> Square {
         *self.map.entry(p).or_insert(Square::default())
     }
-    fn inverse_square(&mut self, p: (isize, isize)) {
+    fn inverse_square(&mut self, p: (i32, i32)) {
         if let Some(sqr) = self.map.get_mut(&p) {
             *sqr = match *sqr {
                 Square::White => Square::Black,
@@ -113,7 +114,7 @@ impl Board {
             }
         }
     }
-    fn capture_point(&mut self, p: (isize,isize)) {
+    fn capture_point(&mut self, p: (i32,i32)) {
         self.border.0 = min(p.0,self.border.0);
         self.border.1 = min(p.1,self.border.1);
         self.border.2 = max(p.0,self.border.2);
@@ -134,26 +135,26 @@ impl Board {
         ctx.set_active_console(1);
         ctx.set_scale(
             f32::min(630f32.div((self.area.0+3) as f32),470f32.div((self.area.1+3) as f32)),
-            (320 + (self.border.0 + self.border.2)) as i32, (240 + (self.border.1 + self.border.3)) as i32
+            320 + self.border.0 + self.border.2, 240 + self.border.3 + self.border.1
         );
         for y in self.border.1-1 ..= self.border.3+1 {
             for x in self.border.0-1 ..= self.border.2+1 {
-                let (colour, char) =
-                    match self.map.get(&(x, y)) {
-                        Some(Square::Black) => (BLACK, 'O'),
-                        Some(Square::White) => (WHITE, 'O'),
-                        None => (BLUE, '.')
-                    };
-                ctx.set(x+320, y+240, colour, colour, to_cp437(char) );
+                ctx.set_bg(x+320, y+240,
+                           self.map
+                               .get(&(x,y))
+                               .map(|&sqr| match sqr { Square::Black => BLACK, _ => WHITE } )
+                               .unwrap_or(BLUE)
+                )
             }
         }
-        self.ant.iter().for_each(|ant| {
-            let (x,y) = ant.pos;
-            ctx.set( x+320, y+240, RED,
-                     self.map.get(&(x,y)).map(|&sqr| match sqr { Square::Black => BLACK, _ =>WHITE } ).unwrap_or(BLUE),
-                     to_cp437('@'));
-        });
+        self.ant.iter()
+            .for_each(|ant|
+                ctx.set_bg( ant.pos.0+320, ant.pos.1+240, RED )
+            );
+    }
+    fn draw_stats(&self, ctx:&mut BTerm) {
         ctx.set_active_console(2);
+        ctx.cls_bg(BLACK);
         ctx.print(0,0,format!("Corners: {:?}",self.border));
         ctx.print(0,2,format!("Area: {:?}",self.area));
         ctx.print(0,4,format!("Population: {:?}",self.ant.len()));
