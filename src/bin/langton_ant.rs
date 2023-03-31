@@ -69,9 +69,9 @@ impl Ant {
     fn step(&mut self, dir: Direction) {
         match dir {
             Direction::Right => self.pos.0 += 1,
-            Direction::Down => self.pos.1 -= 1,
+            Direction::Down => self.pos.1 += 1,
             Direction::Left => self.pos.0 -= 1,
-            Direction::Up => self.pos.1 += 1
+            Direction::Up => self.pos.1 -= 1
         }
     }
     fn tick(&mut self, sqr: Square) -> (i32, i32) {
@@ -134,7 +134,7 @@ impl Board {
     fn draw(&self, ctx:&mut BTerm) {
         ctx.set_active_console(1);
         ctx.set_scale(
-            f32::min(630f32.div((self.area.0+3) as f32),470f32.div((self.area.1+3) as f32)),
+            f32::min(635f32.div((self.area.0+5) as f32),475f32.div((self.area.1+5) as f32)),
             320 + self.border.0 + self.border.2, 240 + self.border.3 + self.border.1
         );
         for y in self.border.1-1 ..= self.border.3+1 {
@@ -156,8 +156,9 @@ impl Board {
         ctx.set_active_console(2);
         ctx.cls_bg(BLACK);
         ctx.print(0,0,format!("Corners: {:?}",self.border));
-        ctx.print(0,2,format!("Area: {:?}",self.area));
-        ctx.print(0,4,format!("Population: {:?}",self.ant.len()));
+        ctx.print(0,2,format!("Offset: {:?}",(self.border.0 + self.border.2, self.border.1 + self.border.3)));
+        ctx.print(0,4,format!("Area: {:?}",self.area));
+        ctx.print(0,6,format!("Population: {:?}",self.ant.len()));
         ctx.print(0,47,format!("FPS: {:?}",ctx.fps));
         ctx.print(0,49,format!("Render time: {:?}(ms)",ctx.frame_time_ms));
     }
