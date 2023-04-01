@@ -133,13 +133,15 @@ impl Board {
     }
     fn draw(&self, ctx:&mut BTerm) {
         ctx.set_active_console(1);
+        ctx.cls_bg(BLACK);
+        let (off_x, off_y) = (320 - self.border.2 - self.border.0, 240 - self.border.3 - self.border.1);
         ctx.set_scale(
-            f32::min(635f32.div((self.area.0+5) as f32),475f32.div((self.area.1+5) as f32)),
-            320 + self.border.0 + self.border.2, 240 + self.border.3 + self.border.1
+            f32::min(640f32.div((self.area.0+10) as f32),480f32.div((self.area.1+10) as f32)),
+            off_x, off_y
         );
         for y in self.border.1-1 ..= self.border.3+1 {
             for x in self.border.0-1 ..= self.border.2+1 {
-                ctx.set_bg(x+320, y+240,
+                ctx.set_bg(x + off_x, y + off_y,
                            self.map
                                .get(&(x,y))
                                .map(|&sqr| match sqr { Square::Black => BLACK, _ => WHITE } )
@@ -149,14 +151,18 @@ impl Board {
         }
         self.ant.iter()
             .for_each(|ant|
-                ctx.set_bg( ant.pos.0+320, ant.pos.1+240, RED )
+                ctx.set_bg( ant.pos.0+off_x, ant.pos.1+off_y, RED )
             );
     }
     fn draw_stats(&self, ctx:&mut BTerm) {
         ctx.set_active_console(2);
         ctx.cls_bg(BLACK);
         ctx.print(0,0,format!("Corners: {:?}",self.border));
-        ctx.print(0,2,format!("Offset: {:?}",(self.border.0 + self.border.2, self.border.1 + self.border.3)));
+        ctx.print(0,2,format!("Offset: {:?}",(
+            (self.border.0 + self.border.2, self.border.1 + self.border.3),
+            (320 - self.border.2 - self.border.0, 240 - self.border.3 - self.border.1)
+        )
+        ));
         ctx.print(0,4,format!("Area: {:?}",self.area));
         ctx.print(0,6,format!("Population: {:?}",self.ant.len()));
         ctx.print(0,47,format!("FPS: {:?}",ctx.fps));
