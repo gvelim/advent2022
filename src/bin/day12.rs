@@ -52,9 +52,8 @@ impl App {
 }
 impl GameState for App {
     fn tick(&mut self, ctx: &mut BTerm) {
-        match ctx.key {
-            Some(VirtualKeyCode::Q) => ctx.quit(),
-            _ => {}
+        if let Some(VirtualKeyCode::Q) = ctx.key {
+            ctx.quit();
         }
         match self.ps.tick(&self.grid, |cs| cs.eq(&self.target)) {
             None => {}
@@ -64,6 +63,7 @@ impl GameState for App {
         }
         self.grid.draw(ctx);
         self.ps.draw(ctx);
+        ctx.print(0,0, format!("FPS:{}",ctx.fps));
     }
 }
 

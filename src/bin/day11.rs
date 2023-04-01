@@ -62,7 +62,6 @@ struct Monkey {
 impl Monkey {
     fn parse_text(input: &str) -> Vec<Monkey> {
         input.split("\n\n")
-            .into_iter()
             .map(|monkey| Monkey::from_str(monkey).unwrap() )
             .fold(Vec::new(), |mut out, monkey|{
                 out.push(monkey);
@@ -132,14 +131,12 @@ impl FromStr for Monkey {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut monkey = Cell::new(Monkey::default());
         s.lines()
-            .into_iter()
             .map(|line| line.trim().split(':').collect::<Vec<_>>())
             .map(|parts|{
                 let m = monkey.get_mut();
                 match parts[0] {
                     "Starting items" => {
                         parts[1].split(',')
-                            .into_iter()
                             .map(|n| WorryType::from_str(n.trim()).unwrap() )
                             .all(|a| { m.items.push_back(a); true });
                     }

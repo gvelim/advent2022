@@ -6,7 +6,6 @@ fn main() {
     let fs = std::fs::read_to_string("./src/bin/day1_input.txt").unwrap_or_else(|e| panic!("{e}"));
 
     let out = fs.split("\n\n")
-        .into_iter()
         .map(|e| e.split('\n'))
         .map(|v|
             v.filter_map(|e| u64::from_str(e).ok() ).collect::<Vec<u64>>()

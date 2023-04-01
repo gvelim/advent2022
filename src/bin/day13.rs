@@ -6,7 +6,6 @@ use crate::ListItem::{L, N};
 
 fn packets_in_right_order(input: &str) -> usize {
     input.split("\n\n")
-        .into_iter()
         .map(|x| x.lines().collect::<Vec<_>>() )
         .map(|d|
             (ListItem::from_str(d[0]), ListItem::from_str(d[1]))
@@ -26,7 +25,6 @@ fn get_decoder_key(input: &str) -> usize {
     ];
 
     let mut order = input.split("\n\n")
-        .into_iter()
         .flat_map(|x| x.lines() )
         .filter_map(|d|
             ListItem::from_str(d).ok()
