@@ -24,13 +24,13 @@ fn main() -> BResult<()> {
     // visualise path produced
     grid.visualise_path(path);
 
-    let ctx = BTermBuilder::simple(grid.width,grid.height)?
-        .with_fps_cap(480f32)
+    let ctx = BTermBuilder::simple(160,60)?
+        .with_simple_console(grid.width,grid.height, "terminal8x8.png")
+        .with_fps_cap(240f32)
         .with_title("Day12: Path Search")
         .build()?;
 
     let app = App::init(input.as_str());
-
     main_loop(ctx, app)
 }
 
@@ -61,6 +61,7 @@ impl GameState for App {
                 self.ps.queue.push_back(target);
             }
         }
+        ctx.set_active_console(1);
         self.grid.draw(ctx);
         self.ps.draw(ctx);
         ctx.print(0,0, format!("FPS:{}",ctx.fps));
@@ -194,10 +195,11 @@ impl PathSearch {
     }
     fn draw(&self,ctx: &mut BTerm) {
         self.queue.iter()
-            .for_each(|cs| {
-                self.extract_path(*cs)
+            .for_each(|&cs| {
+                ctx.set_bg(cs.x,cs.y,RED);
+                self.extract_path(cs)
                     .for_each(|Coord{x,y}| {
-                        ctx.set_bg(x,y,RED);
+                        ctx.set_bg(x,y,ORANGE);
                     })
             })
     }
