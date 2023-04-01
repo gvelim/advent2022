@@ -86,7 +86,7 @@ impl Scenic<'_> {
         Scenic { forest }
     }
     fn scenic_score_dir(&mut self, p:Coord, (dx,dy):(isize,isize)) -> usize {
-        let line = (1..).into_iter().map_while(|i| {
+        let line = (1..).map_while(|i| {
             let coord = Coord {
                 x: p.x.checked_add_signed(dx * i)?,
                 y: p.y.checked_add_signed(dy * i)?,

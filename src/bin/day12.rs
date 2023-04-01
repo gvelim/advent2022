@@ -1,7 +1,9 @@
 use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};
+use bracket_lib::prelude::*;
 
-fn main() {
+fn main() -> BResult<()> {
+
     let input = std::fs::read_to_string("src/bin/day12_input.txt").expect("ops!");
 
     // parse elevations onto a grid
@@ -21,6 +23,48 @@ fn main() {
 
     // visualise path produced
     grid.visualise_path(path);
+
+    let ctx = BTermBuilder::simple(grid.width,grid.height)?
+        .with_fps_cap(480f32)
+        .with_title("Day12: Path Search")
+        .build()?;
+
+    let app = App::init(input.as_str());
+
+    main_loop(ctx, app)
+}
+
+struct App {
+    grid: Grid<u8>,
+    target: Coord,
+    ps: PathSearch
+}
+
+impl App {
+    fn init(input: &str) -> App {
+        // parse elevations onto a grid
+        let (grid,start, target) = parse_elevation(input);
+        // set start state for PathSearch
+        let mut ps = PathSearch::init(&grid);
+        ps.queue.push_back(start);
+        App { grid, target, ps }
+    }
+}
+impl GameState for App {
+    fn tick(&mut self, ctx: &mut BTerm) {
+        match ctx.key {
+            Some(VirtualKeyCode::Q) => ctx.quit(),
+            _ => {}
+        }
+        match self.ps.tick(&self.grid, |cs| cs.eq(&self.target)) {
+            None => {}
+            Some(target) => {
+                self.ps.queue.push_back(target);
+            }
+        }
+        self.grid.draw(ctx);
+        self.ps.draw(ctx);
+    }
 }
 
 fn parse_elevation(data: &str) -> (Grid<u8>, Coord, Coord) {
@@ -106,6 +150,75 @@ impl<T> Grid<T>
     }
 }
 
+struct PathSearch {
+    queue: VecDeque<Coord>,
+    visited: Grid<(bool,Option<Coord>)>,
+    path: Vec<Coord>
+}
+impl PathSearch {
+    fn init(grid: &Grid<u8>) -> PathSearch {
+        PathSearch {
+            queue: VecDeque::<Coord>::new(),
+            visited: Grid::new(grid.width, grid.height),
+            path: Vec::<_>::new()
+        }
+    }
+    fn tick<F>(&mut self, grid: &Grid<u8>, goal: F) -> Option<Coord> where F: Fn(Coord)->bool {
+        let Some(cs) = self.queue.pop_front() else { return None };
+
+        // position matches target
+        if goal(cs) {
+            return Some(cs);
+        }
+        // mark square as visited
+        self.visited.square_mut(cs).unwrap().0 = true;
+
+        let &square = grid.square(cs).unwrap();
+
+        // evaluate neighbour squares and
+        // push to the queue if the have elevation delta <= 1
+        grid.neighbouring(cs)
+            .for_each(|(ns, &elevation)| {
+                if let Some((false, None)) = self.visited.square(ns) {
+                    if elevation <= square + 1 {
+                        // capture the square we arrived from
+                        self.visited.square_mut(ns).unwrap().1 = Some(cs);
+                        self.queue.push_back(ns)
+                    }
+                }
+            });
+        None
+    }
+    fn extract_path(&self, start:Coord) -> PathIter {
+        PathIter { ps: self, cur: start }
+    }
+    fn draw(&self,ctx: &mut BTerm) {
+        self.queue.iter()
+            .for_each(|cs| {
+                self.extract_path(*cs)
+                    .for_each(|Coord{x,y}| {
+                        ctx.set_bg(x,y,RED);
+                    })
+            })
+    }
+}
+struct PathIter<'a> {
+    ps: &'a PathSearch,
+    cur: Coord
+}
+impl Iterator for PathIter<'_> {
+    type Item = Coord;
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.ps.visited.square(self.cur).unwrap().1 {
+            Some(par) => {
+                self.cur = par;
+                Some(par)
+            }
+            _ => None
+        }
+    }
+}
+
 impl Grid<u8> {
     fn reverse_elevation(&mut self) {
         let &max = self.grid.iter().max().unwrap();
@@ -121,31 +234,29 @@ impl Grid<u8> {
         println!("Path length: {}\n{:?}",path.len(),gpath);
     }
     fn shortest_path<F>(&self, start: Coord, goal:F ) -> Vec<Coord> where F: Fn(Coord)->bool {
-        let mut queue = VecDeque::<Coord>::new();
-        let mut visited: Grid<(bool, Option<Coord>)> = Grid::new(self.width, self.height);
-        let mut path = Vec::<_>::new();
 
+        let mut ps = PathSearch::init(self);
         // push start in the queue
-        queue.push_back(start);
+        ps.queue.push_back(start);
 
         // pop from top & while still nodes in the queue
-        while let Some(cs) = queue.pop_front() {
+        while let Some(cs) = ps.queue.pop_front() {
 
             // position matches target
             if goal(cs) {
                 // extract parent position from target
                 let mut cur = cs;
-                while let Some(par) = visited.square(cur).unwrap().1 {
-                    path.push(par);
+                while let Some(par) = ps.visited.square(cur).unwrap().1 {
+                    ps.path.push(par);
                     cur = par;
                 }
                 // remove start position from path
-                path.pop();
+                ps.path.pop();
                 break
             }
 
             // mark square as visited
-            visited.square_mut(cs).unwrap().0 = true;
+            ps.visited.square_mut(cs).unwrap().0 = true;
 
             let &square = self.square(cs).unwrap();
 
@@ -153,16 +264,29 @@ impl Grid<u8> {
             // push to the queue if the have elevation delta <= 1
             self.neighbouring(cs)
                 .for_each(|(ns, &elevation)| {
-                    if let Some((false, None)) = visited.square(ns) {
+                    if let Some((false, None)) = ps.visited.square(ns) {
                         if elevation <= square + 1 {
                             // capture the square we arrived from
-                            visited.square_mut(ns).unwrap().1 = Some(cs);
-                            queue.push_back(ns)
+                            ps.visited.square_mut(ns).unwrap().1 = Some(cs);
+                            ps.queue.push_back(ns)
                         }
                     }
                 })
         }
-        path
+        ps.path
+    }
+    fn draw(&self, ctx: &mut BTerm) {
+        let rgb: Vec<_> = RgbLerp::new(RGB::from(CADETBLUE), RGB::from(WHITESMOKE), 27).collect();
+        (0..self.height).for_each(|y|{
+            (0..self.width).for_each(|x| {
+                let &cell = self.square((x, y).into()).unwrap();
+                if cell == 0 {
+                    ctx.set_bg(x,y, CADETBLUE)
+                } else {
+                    ctx.set_bg(x,y,  rgb[cell as usize]);
+                }
+            });
+        });
     }
 }
 
