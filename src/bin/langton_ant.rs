@@ -12,7 +12,8 @@ fn main() -> BResult<()> {
         .with_simple_console(640,480,"terminal8x8.png")
         .with_sparse_console_no_bg(80, 50, "terminal8x8.png")
         .with_fps_cap(30f32)
-        .with_title("Langton's Ant - Press 'Q':exit, 'A':Ant")
+        .with_vsync(true)
+        .with_title("Langton's Ant - Press 'Q':exit, 'A':Ant, 'I':Invert")
         .build()?;
 
     main_loop(ctx, board)
@@ -26,6 +27,7 @@ impl GameState for Board {
         match ctx.key {
             Some(VirtualKeyCode::Q) => ctx.quit(),
             Some(VirtualKeyCode::A) => self.inject_ant(),
+            Some(VirtualKeyCode::I) => self.invert_board(),
             _ => {}
         }
     }
@@ -113,6 +115,16 @@ impl Board {
                 Square::Black => Square::White
             }
         }
+    }
+    fn invert_board(&mut self) {
+        self.map
+            .values_mut()
+            .for_each(|sqr|
+                *sqr = match *sqr {
+                    Square::White => Square::Black,
+                    Square::Black => Square::White
+                }
+            )
     }
     fn capture_point(&mut self, p: (i32,i32)) {
         self.border.0 = min(p.0,self.border.0);
