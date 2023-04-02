@@ -65,20 +65,20 @@ impl Direction {
 #[derive(Debug)]
 struct Ant {
     pos: (i32,i32),
-    orient: Direction
+    dir: Direction
 }
 impl Ant {
     fn init(pos: (i32, i32)) -> Ant {
-        Ant { pos, orient: Direction::Down }
+        Ant { pos, dir: Direction::Down }
     }
     fn turn_right(&mut self) -> Direction {
-        self.orient.turn_right()
+        self.dir.turn_right()
     }
     fn turn_left(&mut self) -> Direction {
-        self.orient.turn_left()
+        self.dir.turn_left()
     }
-    fn step(&mut self, dir: Direction) {
-        match dir {
+    fn step(&mut self) {
+        match self.dir {
             Direction::Right => self.pos.0 += 1,
             Direction::Down => self.pos.1 += 1,
             Direction::Left => self.pos.0 -= 1,
@@ -86,11 +86,11 @@ impl Ant {
         }
     }
     fn tick(&mut self, sqr: Square) -> (i32, i32) {
-        let dir = match sqr {
-            Square::White => self.turn_right(),
-            Square::Black => self.turn_left()
+        match sqr {
+            Square::White => self.dir.turn_right(),
+            Square::Black => self.dir.turn_left()
         };
-        self.step( dir );
+        self.step();
         self.pos
     }
 }
