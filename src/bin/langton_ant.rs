@@ -41,32 +41,41 @@ impl Default for Square {
 
 #[derive(Copy, Clone, Debug)]
 enum Direction { Right, Down, Left, Up }
-const DIRECTION: [Direction;4] = [Direction::Down, Direction::Left, Direction::Up, Direction::Right];
+impl Direction {
+    fn turn_right(&mut self) -> Direction {
+        *self = match self {
+            Direction::Right => Direction::Down,
+            Direction::Down => Direction::Left,
+            Direction::Left => Direction::Up,
+            Direction::Up => Direction::Right
+        };
+        *self
+    }
+    fn turn_left(&mut self) -> Direction {
+        *self = match self {
+            Direction::Right => Direction::Up,
+            Direction::Up => Direction::Left,
+            Direction::Left => Direction::Down,
+            Direction::Down => Direction::Right
+        };
+        *self
+    }
+}
 
 #[derive(Debug)]
 struct Ant {
     pos: (i32,i32),
-    orient: usize
+    orient: Direction
 }
 impl Ant {
     fn init(pos: (i32, i32)) -> Ant {
-        Ant { pos, orient: 1 }
+        Ant { pos, orient: Direction::Down }
     }
     fn turn_right(&mut self) -> Direction {
-        self.orient = match self.orient {
-            0..=2 => self.orient + 1,
-            3 => 0,
-            _ => unreachable!()
-        };
-        DIRECTION[self.orient]
+        self.orient.turn_right()
     }
     fn turn_left(&mut self) -> Direction {
-        self.orient = match self.orient {
-            0 => 3,
-            1..=3 => self.orient - 1,
-            _ => unreachable!()
-        };
-        DIRECTION[self.orient]
+        self.orient.turn_left()
     }
     fn step(&mut self, dir: Direction) {
         match dir {
