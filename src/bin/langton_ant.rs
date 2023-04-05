@@ -79,12 +79,6 @@ impl Ant {
     fn init(pos: (i32, i32)) -> Ant {
         Ant { pos, dir: Direction::Down }
     }
-    fn turn_right(&mut self) -> Direction {
-        self.dir.turn_right()
-    }
-    fn turn_left(&mut self) -> Direction {
-        self.dir.turn_left()
-    }
     fn step(&mut self) {
         match self.dir {
             Direction::Right => self.pos.0 += 1,
