@@ -120,12 +120,10 @@ impl Board {
         *self.map.entry(p).or_insert(Square::default())
     }
     fn inverse_square(&mut self, p: (i32, i32)) {
-        self.map.get_mut(&p).map(|sqr| sqr.inverse());
+        self.map.get_mut(&p).map( Square::inverse );
     }
     fn invert_board(&mut self) {
-        self.map
-            .values_mut()
-            .for_each(|sqr| sqr.inverse())
+        self.map.values_mut().for_each(Square::inverse )
     }
     fn capture_point(&mut self, p: (i32,i32)) {
         self.border.0 = min(p.0,self.border.0);
