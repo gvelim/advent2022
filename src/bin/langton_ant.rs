@@ -38,6 +38,14 @@ enum Square { White, Black }
 impl Default for Square {
     fn default() -> Self { Square::White }
 }
+impl Square {
+    fn inverse(&mut self) {
+        *self = match self {
+            Square::White => Square::Black,
+            Square::Black => Square::White
+        }
+    }
+}
 
 #[derive(Copy, Clone, Debug)]
 enum Direction { Right, Down, Left, Up }
@@ -118,22 +126,12 @@ impl Board {
         *self.map.entry(p).or_insert(Square::default())
     }
     fn inverse_square(&mut self, p: (i32, i32)) {
-        if let Some(sqr) = self.map.get_mut(&p) {
-            *sqr = match *sqr {
-                Square::White => Square::Black,
-                Square::Black => Square::White
-            }
-        }
+        self.map.get_mut(&p).map(|sqr| sqr.inverse());
     }
     fn invert_board(&mut self) {
         self.map
             .values_mut()
-            .for_each(|sqr|
-                *sqr = match *sqr {
-                    Square::White => Square::Black,
-                    Square::Black => Square::White
-                }
-            )
+            .for_each(|sqr| sqr.inverse())
     }
     fn capture_point(&mut self, p: (i32,i32)) {
         self.border.0 = min(p.0,self.border.0);
