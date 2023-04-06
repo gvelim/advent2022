@@ -11,7 +11,7 @@ fn main() -> BResult<()> {
     let ctx = BTermBuilder::simple(160, 100)?
         .with_simple_console(640,480,"terminal8x8.png")
         .with_sparse_console_no_bg(80, 50, "terminal8x8.png")
-        .with_fps_cap(30f32)
+        .with_fps_cap(15f32)
         .with_vsync(true)
         .with_title("Langton's Ant - Press 'Q':exit, 'A':Ant, 'I':Invert")
         .build()?;
@@ -21,15 +21,15 @@ fn main() -> BResult<()> {
 
 impl GameState for Board {
     fn tick(&mut self, ctx: &mut BTerm) {
-        self.tick();
-        self.draw(ctx);
-        self.draw_stats(ctx);
         match ctx.key {
             Some(VirtualKeyCode::Q) => ctx.quit(),
             Some(VirtualKeyCode::A) => self.inject_ant(),
             Some(VirtualKeyCode::I) => self.invert_board(),
             _ => {}
         }
+        self.tick();
+        self.draw(ctx);
+        self.draw_stats(ctx);
     }
 }
 
@@ -87,13 +87,12 @@ impl Ant {
             Direction::Up => self.pos.1 -= 1
         }
     }
-    fn tick(&mut self, sqr: Square) -> (i32, i32) {
+    fn tick(&mut self, sqr: Square) {
         match sqr {
             Square::White => self.dir.turn_right(),
             Square::Black => self.dir.turn_left()
         };
         self.step();
-        self.pos
     }
 }
 
@@ -116,11 +115,8 @@ impl Board {
     fn inject_ant(&mut self) {
         self.ant.push(Ant::init((0, 0)))
     }
-    fn square_colour(&mut self, p: (i32, i32)) -> Square {
-        *self.map.entry(p).or_insert(Square::default())
-    }
-    fn inverse_square(&mut self, p: (i32, i32)) {
-        self.map.get_mut(&p).map( Square::inverse );
+    fn square_colour(&mut self, p: (i32, i32)) -> &mut Square {
+        self.map.entry(p).or_insert(Square::default())
     }
     fn invert_board(&mut self) {
         self.map.values_mut().for_each(Square::inverse )
@@ -137,9 +133,9 @@ impl Board {
         (0..self.ant.len()).for_each(|i|{
             let p = self.ant[i].pos;
             self.capture_point(p);
-            let sqr = self.square_colour(p);
+            let sqr = *self.square_colour(p);
             self.ant[i].tick(sqr);
-            self.inverse_square(p);
+            self.square_colour(p).inverse();
         })
     }
     fn draw(&self, ctx:&mut BTerm) {

@@ -26,7 +26,7 @@ fn main() -> BResult<()> {
 
     let ctx = BTermBuilder::simple(160,60)?
         .with_simple_console(grid.width,grid.height, "terminal8x8.png")
-        .with_fps_cap(240f32)
+        .with_fps_cap(480f32)
         .with_title("Day12: Path Search")
         .build()?;
 
