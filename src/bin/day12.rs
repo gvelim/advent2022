@@ -28,7 +28,7 @@ fn main() -> BResult<()> {
         .with_simple_console(grid.width,grid.height, "terminal8x8.png")
         .with_simple_console_no_bg(grid.width,grid.height, "terminal8x8.png")
         .with_simple_console_no_bg(grid.width,grid.height, "terminal8x8.png")
-        .with_fps_cap(480f32)
+        .with_fps_cap(640f32)
         .with_title("Day12: Path Search")
         .build()?;
 
@@ -39,7 +39,7 @@ fn main() -> BResult<()> {
 }
 
 #[derive(Copy, Clone, Debug)]
-enum Level {Menu, Level1}
+enum Level {Menu, Level1, Level2}
 #[derive(Copy, Clone, Debug)]
 enum State {Init, Run, Finish}
 struct App {
@@ -55,16 +55,18 @@ impl App {
         // parse elevations onto a grid
         let (grid,start, target) = parse_elevation(input);
         // set start state for PathSearch
-        let mut ps = PathSearch::init(&grid);
+        let ps = PathSearch::init(&grid);
         App { grid, target, start, ps, state: (Level::Menu,State::Init) }
     }
     fn menu(&mut self, ctx: &mut BTerm) -> (Level,State) {
         ctx.set_active_console(3);
         match ctx.key {
             Some(VirtualKeyCode::Key1) => (Level::Level1,State::Init),
+            Some(VirtualKeyCode::Key2) => (Level::Level2,State::Init),
             Some(VirtualKeyCode::Q) => {ctx.quit(); (Level::Menu, State::Run)}
             _ => {
-                ctx.print_centered( 22, "Press '1' for simulation 1");
+                ctx.print_centered( 22, "Press '1' : Lowest to highest elevation");
+                ctx.print_centered( 24, "Press '2' : Highest to lowest elevation ");
                 ctx.print_centered( 26, "Press 'Q' to exit");
                 (Level::Menu, State::Run)
             }
@@ -92,14 +94,58 @@ impl App {
                         (l, State::Run)
                     }
                     Some(target) => {
-                        ctx.set_active_console(3);
-                        ctx.print_centered(10, "Path Found !!");
+                        self.ps.queue.clear();
+                        self.ps.queue.push_back(target);
+                        ctx.cls();
+                        self.ps.draw(ctx);
                         (l, State::Finish)
                     }
                 }
             }
-            (_, State::Finish) => (Level::Menu, State::Init),
-            _ => unreachable!()
+            (_, State::Finish) => {
+                ctx.set_active_console(3);
+                ctx.print_centered(10, "Path Found !!");
+                (Level::Menu, State::Init)
+            }
+        }
+    }
+    fn level2(&mut self, ctx: &mut BTerm) -> (Level,State) {
+        ctx.set_active_console(2);
+        match self.state {
+            (l, State::Init) => {
+                self.ps.reset();
+                self.ps.queue.push_back(self.target);
+                self.grid.reverse_elevation();
+                ctx.set_active_console(3);
+                ctx.cls();
+                (l, State::Run)
+            },
+            (l, State::Run) => {
+                match ctx.key {
+                    Some(VirtualKeyCode::Q) => ctx.quit(),
+                    _ => {}
+                }
+                match self.ps.tick(&self.grid, |cs| 26.eq(self.grid.square(cs).unwrap())) {
+                    None => {
+                        ctx.cls();
+                        self.ps.draw(ctx);
+                        (l, State::Run)
+                    }
+                    Some(target) => {
+                        self.ps.queue.clear();
+                        self.ps.queue.push_back(target);
+                        ctx.cls();
+                        self.ps.draw(ctx);
+                        self.grid.reverse_elevation();
+                        (l, State::Finish)
+                    }
+                }
+            }
+            (_, State::Finish) => {
+                ctx.set_active_console(3);
+                ctx.print_centered(10, "Path Found !!");
+                (Level::Menu, State::Init)
+            }
         }
     }
 }
@@ -108,6 +154,7 @@ impl GameState for App {
         self.state = match self.state {
             (Level::Menu, _) => self.menu(ctx),
             (Level::Level1, _) => self.level1(ctx),
+            (Level::Level2, _) => self.level2(ctx),
         };
         ctx.set_active_console(3);
         ctx.print(0,0, format!("FPS: {}",ctx.fps));
