@@ -24,13 +24,16 @@ fn main() -> BResult<()> {
     // visualise path produced
     grid.visualise_path(path);
 
-    let ctx = BTermBuilder::simple(160,60)?
+    let mut ctx = BTermBuilder::simple(160,60)?
         .with_simple_console(grid.width,grid.height, "terminal8x8.png")
+        .with_simple_console_no_bg(grid.width,grid.height, "terminal8x8.png")
         .with_fps_cap(480f32)
         .with_title("Day12: Path Search")
         .build()?;
 
     let app = App::init(input.as_str());
+    ctx.set_active_console(1);
+    app.grid.draw(&mut ctx);
     main_loop(ctx, app)
 }
 
@@ -61,8 +64,9 @@ impl GameState for App {
                 self.ps.queue.push_back(target);
             }
         }
-        ctx.set_active_console(1);
-        self.grid.draw(ctx);
+        ctx.set_active_console(2);
+        // self.grid.draw(ctx);
+        ctx.cls();
         self.ps.draw(ctx);
         ctx.print(0,0, format!("FPS:{}",ctx.fps));
     }
@@ -196,11 +200,11 @@ impl PathSearch {
     fn draw(&self,ctx: &mut BTerm) {
         self.queue.iter()
             .for_each(|&cs| {
-                ctx.set_bg(cs.x,cs.y,RED);
+                ctx.set(cs.x,cs.y,RED,BLACK,to_cp437('\u{2588}'));
                 self.extract_path(cs)
-                    .for_each(|Coord{x,y}| {
-                        ctx.set_bg(x,y,ORANGE);
-                    })
+                    .for_each(|Coord{x,y}|
+                        ctx.set(x,y,ORANGE, BLACK,to_cp437('\u{2588}'))
+                    )
             })
     }
 }
@@ -278,16 +282,11 @@ impl Grid<u8> {
         ps.path
     }
     fn draw(&self, ctx: &mut BTerm) {
-        let rgb: Vec<_> = RgbLerp::new(RGB::from(CADETBLUE), RGB::from(WHITESMOKE), 27).collect();
+        let rgb: Vec<_> = RgbLerp::new(CADETBLUE.into(), WHITESMOKE.into(), 27).collect();
         (0..self.height).for_each(|y|{
-            (0..self.width).for_each(|x| {
-                let &cell = self.square((x, y).into()).unwrap();
-                if cell == 0 {
-                    ctx.set_bg(x,y, CADETBLUE)
-                } else {
-                    ctx.set_bg(x,y,  rgb[cell as usize]);
-                }
-            });
+            (0..self.width).for_each(|x|
+                ctx.set_bg(x, y, self.square((x, y).into()).map(|&cell| rgb[cell as usize]).unwrap_or(BLACK.into()))
+            );
         });
     }
 }
@@ -295,10 +294,13 @@ impl Grid<u8> {
 impl Debug for Grid<u8> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         (0..self.height).for_each(|y|{
-            (0..self.width).for_each(|x| {
-                let &cell = self.square((x, y).into()).unwrap();
-                if cell == 0 { write!(f, "{:^2}",'.') } else { write!(f, "{:^2?}", cell) }.expect("TODO: panic message");
-            });
+            (0..self.width).for_each(|x|
+                write!(f, "{:^2}",
+                       self.square((x, y).into())
+                           .map(|&cell| match cell { 0 => '.', _=> 'x'})
+                           .expect("TODO: panic message")
+                ).expect("failed in x")
+            );
             writeln!(f).expect("failed in y");
         });
         Ok(())
