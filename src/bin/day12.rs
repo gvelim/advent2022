@@ -24,7 +24,7 @@ fn main() -> BResult<()> {
     // visualise path produced
     grid.visualise_path(path);
 
-    let mut ctx = BTermBuilder::simple(160,60)?
+    let mut ctx = BTermBuilder::simple(160,120)?
         .with_simple_console(grid.width,grid.height, "terminal8x8.png")
         .with_simple_console_no_bg(grid.width,grid.height, "terminal8x8.png")
         .with_simple_console_no_bg(grid.width,grid.height, "terminal8x8.png")
@@ -65,9 +65,9 @@ impl App {
             Some(VirtualKeyCode::Key2) => (Level::Level2,State::Init),
             Some(VirtualKeyCode::Q) => {ctx.quit(); (Level::Menu, State::Run)}
             _ => {
-                ctx.print_centered( 22, "Press '1' : Lowest to highest elevation");
-                ctx.print_centered( 24, "Press '2' : Highest to lowest elevation ");
-                ctx.print_centered( 26, "Press 'Q' to exit");
+                ctx.print_centered( 42, "Press '1' : Lowest to highest elevation");
+                ctx.print_centered( 44, "Press '2' : Highest to lowest elevation ");
+                ctx.print_centered( 46, "Press 'Q' to exit");
                 (Level::Menu, State::Run)
             }
         }
@@ -91,6 +91,7 @@ impl App {
                     None => {
                         ctx.cls();
                         self.ps.draw(ctx);
+                        ctx.set(self.target.x,self.target.y, BLUE, BLACK, to_cp437('\u{2588}'));
                         (l, State::Run)
                     }
                     Some(target) => {
