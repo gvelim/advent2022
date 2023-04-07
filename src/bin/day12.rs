@@ -159,7 +159,7 @@ impl GameState for App {
         };
         ctx.set_active_console(3);
         ctx.print(0,0, format!("FPS: {}",ctx.fps));
-        ctx.print(0,1, format!("State: {:?}",self.state));
+        ctx.print(0,1, format!("State: {:?}       ",self.state));
     }
 }
 
