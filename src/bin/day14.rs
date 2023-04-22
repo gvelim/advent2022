@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::fmt::{Debug, Formatter};
 use std::num::ParseIntError;
 use std::str::FromStr;
@@ -75,7 +75,8 @@ fn main() -> BResult<()>{
 
 struct App {
     board: Board<Material>,
-    init: Coord
+    grains: VecDeque<Grain>,
+    start: Coord
 }
 impl App {
     fn init(input: &str) -> App {
@@ -86,13 +87,36 @@ impl App {
         // paint layout on the board
         plines.into_iter()
             .for_each(|pline| Painter::rock_walls(&mut board, &pline) );
-        App { board, init: (centre, 0).into() }
+        App { board, grains: VecDeque::new(), start:(centre,0).into() }
     }
 }
 
 impl GameState for App {
     fn tick(&mut self, ctx: &mut BTerm) {
-        let App{ board, init } = self;
+        let App{ board, grains, start } = self;
+        match ctx.key {
+            Some(VirtualKeyCode::G) => grains.push_back(Grain::release_grain(*start)),
+            Some(VirtualKeyCode::Q) => ctx.quit(),
+            _ => {}
+        }
+        grains.iter_mut()
+            .filter(|grain| !grain.is_settled())
+            .for_each(|grain|{
+                match (grain.fall(board), grain.settled) {
+                    (Some(_), _) => {},
+                    (None, true) => {
+                        *board.square_mut(grain.pos).unwrap() = Material::Sand;
+                    }
+                    (None, _) => { }
+                }
+            });
+        ctx.set_active_console(2);
+        ctx.cls();
+        grains.iter()
+            .for_each(|grain| {
+                let Coord{x,y} = grain.pos;
+                ctx.set(x - board.offset_x, y,if grain.is_settled() { YELLOW }else { RED },BLACK,to_cp437('\u{2588}'))
+            })
     }
 }
 
