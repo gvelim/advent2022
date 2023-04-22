@@ -62,7 +62,8 @@ fn main() -> BResult<()>{
     let mut ctx = BTermBuilder::simple(board.width>>1, board.height>>1)?
         .with_simple_console(board.width, board.height, "terminal8x8.png")
         .with_simple_console_no_bg(board.width, board.height, "terminal8x8.png")
-        .with_fps_cap(200f32)
+        .with_simple_console_no_bg(80, 50, "terminal8x8.png")
+        .with_fps_cap(60f32)
         .build()?;
 
     let app = App::init(input.as_str());
@@ -94,6 +95,7 @@ impl App {
 impl GameState for App {
     fn tick(&mut self, ctx: &mut BTerm) {
         let App{ board, grains, start } = self;
+
         match ctx.key {
             Some(VirtualKeyCode::G) => grains.push_back(Grain::release_grain(*start)),
             Some(VirtualKeyCode::Q) => ctx.quit(),
@@ -115,8 +117,15 @@ impl GameState for App {
         grains.iter()
             .for_each(|grain| {
                 let Coord{x,y} = grain.pos;
-                ctx.set(x - board.offset_x, y,if grain.is_settled() { YELLOW }else { RED },BLACK,to_cp437('\u{2588}'))
-            })
+                ctx.set( x - board.offset_x, y,
+                        if grain.is_settled() { YELLOW } else { RED },BLACK,
+                        to_cp437('\u{2588}')
+                );
+            });
+
+        ctx.set_active_console(3);
+        ctx.print(1,1, format!("Sand grains: {}  ", grains.len()));
+        ctx.print(1,48, format!("FPS: {} ",ctx.fps));
     }
 }
 
@@ -174,12 +183,12 @@ impl Board<Material> {
             )
             .for_each(|(x,y)|{
                 let (symbol, fg) = match self.square((x+self.offset_x, y).into()) {
-                    Some(Material::Rock) => ('\u{2588}', GRAY),
-                    Some(Material::Sand) => ('\u{2588}',YELLOW),
+                    Some(Material::Rock) => ('\u{2588}', GREEN),
+                    Some(Material::Sand) => ('\u{2588}', YELLOW),
                     // Some(Material::Air) =>
-                    _ => (' ', BLUE)
+                    _ => (' ', DARK_BLUE)
                 };
-                ctx.set(x,y, fg, BLUE, to_cp437(symbol) )
+                ctx.set(x,y, fg, DARK_BLUE, to_cp437(symbol) )
             });
     }
 
@@ -247,7 +256,7 @@ impl Painter {
 impl Debug for Board<Material> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f,"   |").expect("failed in y");
-        (0..self.width).for_each(|x| { write!(f, "{:^3}",x + self.offset_x).expect("ops") });
+        (0..self.width).for_each(|x| { write!(f, "{:^3}", x + self.offset_x).expect("ops") });
         writeln!(f).expect("");
         (0..self.height).for_each(|y|{
             write!(f,"{y:3}|").expect("failed in y");
