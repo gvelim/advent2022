@@ -59,7 +59,7 @@ fn main() -> BResult<()>{
 
     println!("Scenario 2: Grains Rest: {}\n{:?}", board.grains_at_rest(), board);
 
-    let mut ctx = BTermBuilder::simple(board.width / 2, board.height/2)?
+    let mut ctx = BTermBuilder::simple(board.width>>1, board.height>>1)?
         .with_simple_console(board.width, board.height, "terminal8x8.png")
         .with_simple_console_no_bg(board.width, board.height, "terminal8x8.png")
         .with_fps_cap(200f32)
