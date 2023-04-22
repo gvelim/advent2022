@@ -332,7 +332,7 @@ impl<T> Board<T>
         if !self.in_bounds(p) {
             return None
         }
-        self.grid.get(&p).map(|p| *p).or(Some(T::default()))
+        self.grid.get(&p).copied().or(Some(T::default()))
     }
     fn square_mut(&mut self, p: Coord) -> Option<&mut T> {
         if !self.in_bounds(p) {
