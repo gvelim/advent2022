@@ -1,19 +1,21 @@
+use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::num::ParseIntError;
-use std::ptr::addr_of_mut;
 use std::str::FromStr;
 use bracket_lib::prelude::*;
 
-fn parse_plines(input:&str) -> (Coord, Vec<Vec<Coord>>) {
-    let mut max = Coord{ x:0, y:0 };
+fn parse_plines(input:&str) -> (Coord, Coord, Vec<Vec<Coord>>) {
+    let mut br = Coord{ x:0, y:0 };
+    let mut tl = Coord{ x: usize::MAX, y: 0 };
     let plines =
         input.lines()
             .map(|line|{
                 line.split(" -> ")
                     .map(|val| Coord::from_str(val).expect("Ops!"))
                     .inspect(|p|{
-                        if max.x < p.x { max.x = p.x }
-                        if max.y < p.y { max.y = p.y }
+                        tl.x = std::cmp::min(tl.x, p.x);
+                        br.x = std::cmp::max(br.x, p.x);
+                        br.y = std::cmp::max(br.y, p.y);
                     })
                     .collect::<Vec<_>>()
             })
@@ -21,7 +23,7 @@ fn parse_plines(input:&str) -> (Coord, Vec<Vec<Coord>>) {
                 out.push(pline);
                 out
             });
-    (max, plines)
+    (tl, br, plines)
 }
 
 fn main() -> BResult<()>{
@@ -30,9 +32,9 @@ fn main() -> BResult<()>{
     let input = std::fs::read_to_string("src/bin/day14_input.txt").expect("ops!");
 
     // parse the board's wall layout
-    let (max, plines) = parse_plines(input.as_str());
+    let (tl, br, plines) = parse_plines(input.as_str());
 
-    let mut board = Board::new((max.x<<1)+1,max.y+2+1);
+    let mut board = Board::new(tl, br);
 
     // paint layout on the board
     plines.into_iter()
@@ -49,7 +51,7 @@ fn main() -> BResult<()>{
 
     board.empty_sand();
     // add rock floor
-    Painter::rock_wall(&mut board,(0, max.y+2).into(), (max.x<<1, max.y+2).into());
+    board.toggle_floor(500);
     // run the sand simulation until grain settled position == starting position
     board.run(
         start, |g| g.pos.eq(&start)
@@ -57,13 +59,17 @@ fn main() -> BResult<()>{
 
     println!("Scenario 2: Grains Rest: {}\n{:?}", board.grains_at_rest(), board);
 
-    let mut ctx = BTermBuilder::simple(max.x/3, max.y/3)?
-        .with_simple_console(max.x, max.y, "terminal8x8.png")
-        .with_simple_console_no_bg(max.x, max.y, "terminal8x8.png")
+    let mut ctx = BTermBuilder::simple(board.width / 2, board.height/2)?
+        .with_simple_console(board.width, board.height, "terminal8x8.png")
+        .with_simple_console_no_bg(board.width, board.height, "terminal8x8.png")
         .with_fps_cap(200f32)
         .build()?;
 
     let app = App::init(input.as_str());
+
+    ctx.set_active_console(1);
+    app.board.draw(&mut ctx);
+
     main_loop(ctx, app)
 }
 
@@ -74,20 +80,19 @@ struct App {
 impl App {
     fn init(input: &str) -> App {
         // parse the board's wall layout
-        let (max, plines) = parse_plines(input);
-        let mut board = Board::new((max.x<<1)+1,max.y+2+1);
+        let (tl,br, plines) = parse_plines(input);
+        let mut board = Board::new(tl, br);
+        let centre = board.centre_x;
         // paint layout on the board
         plines.into_iter()
             .for_each(|pline| Painter::rock_walls(&mut board, &pline) );
-        App { board, init: (500,0).into() }
+        App { board, init: (centre, 0).into() }
     }
 }
 
 impl GameState for App {
     fn tick(&mut self, ctx: &mut BTerm) {
         let App{ board, init } = self;
-        ctx.set_active_console(1);
-        self.board.draw(ctx, 200);
     }
 }
 
@@ -98,15 +103,24 @@ impl Default for Material {
 }
 impl Board<Material> {
     fn grains_at_rest(&self) -> usize {
-        self.grid.iter()
+        self.grid.values()
             .filter(|&s| Material::Sand.eq(s) )
             .count()
     }
     fn empty_sand(&mut self) -> usize {
-        self.grid.iter_mut()
+        self.grid.values_mut()
             .filter(|s| Material::Sand.eq(s) )
             .map(|s| *s = Material::Air)
             .count()
+    }
+    fn toggle_floor(&mut self, mid: usize) {
+        let height = self.height-1;
+        let left = Coord { x: self.offset_x, y: height };
+        let right = Coord { x: self.offset_x + self.width - 1, y : height };
+        match self.square(left) {
+            Some(Material::Rock) => Painter::wall(self, left, right, Material::Air),
+            _ => Painter::wall(self, left, right, Material::Rock)
+        }
     }
     fn run<F>(&mut self, start: Coord, check_goal: F) where F: Fn(&Grain) -> bool {
 
@@ -129,21 +143,22 @@ impl Board<Material> {
             *self.square_mut(grain.pos).unwrap() = Material::Sand;
         }
     }
-    fn draw(&self, ctx: &mut BTerm, offset: usize) {
-        (offset..self.width+offset)
+    fn draw(&self, ctx: &mut BTerm) {
+        (0..self.width)
             .flat_map(|x|
-                (0..self.height).map(move |y| Coord{x, y})
+                (0..self.height).map(move |y| (x,y))
             )
-            .for_each(|p|{
-                let (symbol, fg) = match self.square(p) {
-                    Some(Material::Air) => (' ', BLACK),
+            .for_each(|(x,y)|{
+                let (symbol, fg) = match self.square((x+self.offset_x, y).into()) {
                     Some(Material::Rock) => ('\u{2588}', WHITE),
                     Some(Material::Sand) => ('\u{2588}',YELLOW),
-                    _ => unreachable!()
+                    // Some(Material::Air) =>
+                    _ => (' ', BLACK)
                 };
-                ctx.set(p.x,p.y, fg, BLACK, to_cp437(symbol) )
+                ctx.set(x,y, fg, BLACK, to_cp437(symbol) )
             });
     }
+
 }
 
 struct Grain {
@@ -186,7 +201,7 @@ impl Grain {
 
 struct Painter();
 impl Painter {
-    fn rock_wall(board: &mut Board<Material>, a: Coord, b: Coord) {
+    fn wall(board: &mut Board<Material>, a: Coord, b: Coord, mat: Material) {
         let x_range = if a.x <= b.x { a.x ..= b.x } else { b.x ..= a.x };
         x_range
             .flat_map(|x| {
@@ -194,13 +209,13 @@ impl Painter {
                 y_range.map(move |y| (x, y).into())
             })
             .for_each(|p|
-                *board.square_mut(p).unwrap() = Material::Rock
+                *board.square_mut(p).unwrap() = mat
             );
     }
     fn rock_walls(board: &mut Board<Material>, c: &[Coord]) {
         c.windows(2)
             .for_each(| p|
-                Painter::rock_wall(board,p[0], p[1])
+                Painter::wall(board, p[0], p[1], Material::Rock)
             );
     }
 }
@@ -208,16 +223,17 @@ impl Painter {
 impl Debug for Board<Material> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f,"   |").expect("failed in y");
-        (0..self.width).for_each(|x| { write!(f, "{:^3}",x).expect("ops") });
+        (0..self.width).for_each(|x| { write!(f, "{:^3}",x + self.offset_x).expect("ops") });
         writeln!(f).expect("");
         (0..self.height).for_each(|y|{
             write!(f,"{y:3}|").expect("failed in y");
             (0..self.width).for_each(|x| {
                 write!(f, "{:^3}",
-                       match self.square((x, y).into()).unwrap() {
-                           Material::Air => '.',
-                           Material::Rock => '#',
-                           Material::Sand => 'o',
+                       match self.square((x + self.offset_x, y).into()) {
+                           Some(Material::Rock) => '#',
+                           Some(Material::Sand) => 'o',
+                           // Material::Air => '.',
+                           _ => '.'
                        }).expect("Ops!")
             });
             writeln!(f).expect("failed in y");
@@ -226,7 +242,7 @@ impl Debug for Board<Material> {
     }
 }
 
-#[derive(Ord, PartialOrd,Copy, Clone, Eq, PartialEq)]
+#[derive(Ord, PartialOrd,Copy, Clone, Eq, PartialEq, Hash)]
 struct Coord {
     x: usize,
     y: usize
@@ -259,30 +275,35 @@ impl FromStr for Coord {
 struct Board<T> {
     width: usize,
     height: usize,
-    grid: Vec<T>,
+    centre_x: usize,
+    offset_x: usize,
+    grid: HashMap<Coord,T>,
 }
 impl<T> Board<T>
     where T : Copy + Default {
-    fn new(width: usize, height: usize) -> Board<T> {
+    fn new(top_left: Coord, bottom_right: Coord) -> Board<T> {
+        println!("{:?}", &(top_left,bottom_right));
         Board {
-            height,
-            width,
-            grid: vec![T::default(); width * height],
+            height: bottom_right.y + 3,
+            width : (bottom_right.y + 3) << 1,
+            centre_x: (top_left.x + bottom_right.x) >> 1,
+            offset_x: ((top_left.x + bottom_right.x) >> 1) - bottom_right.y - 2,
+            grid: HashMap::new(),
         }
     }
     fn in_bounds(&self, p:Coord) -> bool {
-        p.x < self.width && p.y < self.height
+        p.x < self.offset_x + self.width && p.y < self.height
     }
-    fn square(&self, p: Coord) -> Option<&T> {
+    fn square(&self, p: Coord) -> Option<T> {
         if !self.in_bounds(p) {
             return None
         }
-        Some(&self.grid[p.y * self.width + p.x])
+        self.grid.get(&p).map(|p| *p).or(Some(T::default()))
     }
     fn square_mut(&mut self, p: Coord) -> Option<&mut T> {
         if !self.in_bounds(p) {
             return None
         }
-        Some(&mut self.grid[p.y * self.width + p.x])
+        Some(self.grid.entry(p).or_insert(T::default()))
     }
 }
