@@ -174,12 +174,12 @@ impl Board<Material> {
             )
             .for_each(|(x,y)|{
                 let (symbol, fg) = match self.square((x+self.offset_x, y).into()) {
-                    Some(Material::Rock) => ('\u{2588}', WHITE),
+                    Some(Material::Rock) => ('\u{2588}', GRAY),
                     Some(Material::Sand) => ('\u{2588}',YELLOW),
                     // Some(Material::Air) =>
-                    _ => (' ', BLACK)
+                    _ => (' ', BLUE)
                 };
-                ctx.set(x,y, fg, BLACK, to_cp437(symbol) )
+                ctx.set(x,y, fg, BLUE, to_cp437(symbol) )
             });
     }
 
