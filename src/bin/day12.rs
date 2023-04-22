@@ -61,8 +61,8 @@ impl App {
     fn menu(&mut self, ctx: &mut BTerm) -> (Level,State) {
         ctx.set_active_console(3);
         match ctx.key {
-            Some(VirtualKeyCode::Key1) => (Level::Level1,State::Init),
-            Some(VirtualKeyCode::Key2) => (Level::Level2,State::Init),
+            Some(VirtualKeyCode::Key1) => { ctx.cls(); (Level::Level1, State::Init) },
+            Some(VirtualKeyCode::Key2) => { ctx.cls(); (Level::Level2, State::Init) },
             Some(VirtualKeyCode::Q) => {ctx.quit(); (Level::Menu, State::Run)}
             _ => {
                 ctx.print_centered( 42, "Press '1' : Lowest to highest elevation");
@@ -78,8 +78,6 @@ impl App {
             (l, State::Init) => {
                 self.ps.reset();
                 self.ps.queue.push_back(self.start);
-                ctx.set_active_console(3);
-                ctx.cls();
                 (l, State::Run)
             },
             (l, State::Run) => {
@@ -117,8 +115,6 @@ impl App {
                 self.ps.reset();
                 self.ps.queue.push_back(self.target);
                 self.grid.reverse_elevation();
-                ctx.set_active_console(3);
-                ctx.cls();
                 (l, State::Run)
             },
             (l, State::Run) => {
