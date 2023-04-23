@@ -5,7 +5,7 @@ use std::str::FromStr;
 use bracket_lib::prelude::*;
 
 fn parse_plines(input:&str) -> (Coord, Coord, Vec<Vec<Coord>>) {
-    let mut br = Coord{ x:0, y:0 };
+    let mut br = Coord{ x: usize::MIN, y: usize::MIN };
     let mut tl = Coord{ x: usize::MAX, y: 0 };
     let plines =
         input.lines()
@@ -51,7 +51,7 @@ fn main() -> BResult<()>{
 
     board.empty_sand();
     // add rock floor
-    board.toggle_floor(500);
+    board.toggle_floor();
     // run the sand simulation until grain settled position == starting position
     board.run(
         start, |g| g.pos.eq(&start)
@@ -62,7 +62,7 @@ fn main() -> BResult<()>{
     let mut ctx = BTermBuilder::simple(board.width>>1, board.height>>1)?
         .with_simple_console(board.width, board.height, "terminal8x8.png")
         .with_simple_console_no_bg(board.width, board.height, "terminal8x8.png")
-        .with_simple_console_no_bg(80, 50, "terminal8x8.png")
+        .with_simple_console_no_bg(board.width>>2, board.height>>2, "terminal8x8.png")
         .with_fps_cap(60f32)
         .build()?;
 
@@ -105,10 +105,13 @@ impl GameState for App {
             .filter(|grain| !grain.is_settled())
             .for_each(|grain|{
                 match (grain.fall(board), grain.settled) {
+                    // grain in motion
                     (Some(_), _) => {},
+                    // grain settled
                     (None, true) => {
                         *board.square_mut(grain.pos).unwrap() = Material::Sand;
                     }
+                    // Grain fallen on the abyss
                     (None, _) => { }
                 }
             });
@@ -124,8 +127,8 @@ impl GameState for App {
             });
 
         ctx.set_active_console(3);
-        ctx.print(1,1, format!("Sand grains: {}  ", grains.len()));
-        ctx.print(1,48, format!("FPS: {} ",ctx.fps));
+        ctx.print(1,1, format!("Grains @rest: {}  ", board.grains_at_rest()));
+        ctx.print(1,38, format!("FPS: {} ",ctx.fps));
     }
 }
 
@@ -146,7 +149,7 @@ impl Board<Material> {
             .map(|s| *s = Material::Air)
             .count()
     }
-    fn toggle_floor(&mut self, mid: usize) {
+    fn toggle_floor(&mut self) {
         let height = self.height-1;
         let left = Coord { x: self.offset_x, y: height };
         let right = Coord { x: self.offset_x + self.width - 1, y : height };
@@ -191,7 +194,6 @@ impl Board<Material> {
                 ctx.set(x,y, fg, DARK_BLUE, to_cp437(symbol) )
             });
     }
-
 }
 
 struct Grain {
@@ -294,7 +296,7 @@ impl FromStr for Coord {
     type Err = ParseIntError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut iter = s.trim().split(',').map(|val| usize::from_str(val) );
+        let mut iter = s.trim().split(',').map(usize::from_str );
         Ok(Coord{
             x: iter.next().unwrap()?,
             y: iter.next().unwrap()?,
@@ -315,7 +317,6 @@ struct Board<T> {
 impl<T> Board<T>
     where T : Copy + Default {
     fn new(top_left: Coord, bottom_right: Coord) -> Board<T> {
-        println!("{:?}", &(top_left,bottom_right));
         Board {
             height: bottom_right.y + 3,
             width : (bottom_right.y + 3) << 1,
@@ -331,7 +332,7 @@ impl<T> Board<T>
         if !self.in_bounds(p) {
             return None
         }
-        self.grid.get(&p).map(|p| *p).or(Some(T::default()))
+        self.grid.get(&p).copied().or(Some(T::default()))
     }
     fn square_mut(&mut self, p: Coord) -> Option<&mut T> {
         if !self.in_bounds(p) {
