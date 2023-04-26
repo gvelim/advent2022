@@ -120,7 +120,7 @@ impl GameState for App {
                         *board.square_mut(grain.pos).unwrap() = Material::Sand;
                     }
                     // Grain fallen on the abyss
-                    (None, _) => { }
+                    (None, _) => { *run = if *run { ! *run } else { false } }
                 }
             });
         ctx.set_active_console(2);
