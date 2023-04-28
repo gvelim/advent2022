@@ -64,6 +64,7 @@ fn main() -> BResult<()>{
         .with_simple_console_no_bg(board.width, board.height, "terminal8x8.png")
         .with_simple_console_no_bg(board.width>>2, board.height>>2, "terminal8x8.png")
         .with_fps_cap(60f32)
+        .with_title("S: Reset, R: Run, G: Grain: Q: Quit")
         .build()?;
 
     let app = App::init(input.as_str());
@@ -77,7 +78,8 @@ fn main() -> BResult<()>{
 struct App {
     board: Board<Material>,
     grains: VecDeque<Grain>,
-    start: Coord
+    start: Coord,
+    run: bool,
 }
 impl App {
     fn init(input: &str) -> App {
@@ -88,19 +90,30 @@ impl App {
         // paint layout on the board
         plines.into_iter()
             .for_each(|pline| Painter::rock_walls(&mut board, &pline) );
-        App { board, grains: VecDeque::new(), start:(centre,0).into() }
+        App { board, grains: VecDeque::new(), start:(centre,0).into(), run: false }
     }
 }
 
 impl GameState for App {
     fn tick(&mut self, ctx: &mut BTerm) {
-        let App{ board, grains, start } = self;
+        let App{ board, grains, start, run } = self;
 
         match ctx.key {
             Some(VirtualKeyCode::G) => grains.push_back(Grain::release_grain(*start)),
+            Some(VirtualKeyCode::R) => *run = ! *run,
             Some(VirtualKeyCode::Q) => ctx.quit(),
+            Some(VirtualKeyCode::W) => {
+                ctx.set_active_console(1);
+                board.toggle_floor();
+                board.draw(ctx);
+            },
+            Some(VirtualKeyCode::S) => {
+                board.empty_sand();
+                grains.clear();
+            },
             _ => {}
         }
+        if *run { grains.push_back(Grain::release_grain(*start)); }
         grains.iter_mut()
             .filter(|grain| !grain.is_settled())
             .for_each(|grain|{
@@ -112,7 +125,7 @@ impl GameState for App {
                         *board.square_mut(grain.pos).unwrap() = Material::Sand;
                     }
                     // Grain fallen on the abyss
-                    (None, _) => { }
+                    (None, _) => *run =  false,
                 }
             });
         ctx.set_active_console(2);
