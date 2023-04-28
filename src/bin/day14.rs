@@ -102,6 +102,11 @@ impl GameState for App {
             Some(VirtualKeyCode::G) => grains.push_back(Grain::release_grain(*start)),
             Some(VirtualKeyCode::R) => *run = ! *run,
             Some(VirtualKeyCode::Q) => ctx.quit(),
+            Some(VirtualKeyCode::W) => {
+                ctx.set_active_console(1);
+                board.toggle_floor();
+                board.draw(ctx);
+            },
             Some(VirtualKeyCode::S) => {
                 board.empty_sand();
                 grains.clear();
@@ -120,7 +125,7 @@ impl GameState for App {
                         *board.square_mut(grain.pos).unwrap() = Material::Sand;
                     }
                     // Grain fallen on the abyss
-                    (None, _) => { *run = if *run { ! *run } else { false } }
+                    (None, _) => *run =  false,
                 }
             });
         ctx.set_active_console(2);
