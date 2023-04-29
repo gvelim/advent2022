@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::fmt::{Debug, Formatter};
 use bracket_lib::prelude::*;
 
@@ -32,38 +32,46 @@ fn main() -> BResult<()> {
         .with_title("Day12: Path Search")
         .build()?;
 
-    let app = App::init(input.as_str());
+    let mut app = App::init(input.as_str());
+
+    app.register_level(Level::Menu, Menu);
+    app.register_level(Level::Level1, ExerciseOne);
+    app.register_level(Level::Level2, ExerciseTwo);
+
     ctx.set_active_console(1);
-    app.grid.draw(&mut ctx);
+    app.store.grid.draw(&mut ctx);
     main_loop(ctx, app)
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash )]
 enum Level {Menu, Level1, Level2}
 #[derive(Copy, Clone, Debug)]
 enum State {Init, Run, Finish}
-struct App {
+
+struct Store {
     grid: Grid<u8>,
     target: Coord,
     start: Coord,
     ps: PathSearch,
-    state: (Level,State)
 }
 
-impl App {
-    fn init(input: &str) -> App {
-        // parse elevations onto a grid
-        let (grid,start, target) = parse_elevation(input);
-        // set start state for PathSearch
-        let ps = PathSearch::init(&grid);
-        App { grid, target, start, ps, state: (Level::Menu,State::Init) }
+trait AppLevel {
+    fn init(&mut self, ctx: &mut BTerm, store: &mut Store) -> (Level, State);
+    fn run(&mut self, ctx: &mut BTerm, store: &mut Store) -> (Level, State);
+    fn term(&mut self, ctx: &mut BTerm, store: &mut Store) -> (Level, State);
+}
+
+struct Menu;
+impl AppLevel for Menu {
+    fn init(&mut self, _: &mut BTerm, _: &mut Store) -> (Level, State) {
+        (Level::Menu, State::Run)
     }
-    fn menu(&mut self, ctx: &mut BTerm) -> (Level,State) {
+    fn run(&mut self, ctx: &mut BTerm, _: &mut Store) -> (Level, State) {
         ctx.set_active_console(3);
         match ctx.key {
             Some(VirtualKeyCode::Key1) => { ctx.cls(); (Level::Level1, State::Init) },
             Some(VirtualKeyCode::Key2) => { ctx.cls(); (Level::Level2, State::Init) },
-            Some(VirtualKeyCode::Q) => {ctx.quit(); (Level::Menu, State::Run)}
+            Some(VirtualKeyCode::Q) => (Level::Menu, State::Finish),
             _ => {
                 ctx.print_centered( 42, "Press '1' : Lowest to highest elevation");
                 ctx.print_centered( 44, "Press '2' : Highest to lowest elevation ");
@@ -72,86 +80,107 @@ impl App {
             }
         }
     }
-    fn level1(&mut self, ctx: &mut BTerm) -> (Level,State) {
-        ctx.set_active_console(2);
-        match self.state {
-            (l, State::Init) => {
-                self.ps.reset();
-                self.ps.queue.push_back(self.start);
-                (l, State::Run)
-            },
-            (l, State::Run) => {
-                match ctx.key {
-                    Some(VirtualKeyCode::Q) => ctx.quit(),
-                    _ => {}
-                }
-                match self.ps.tick(&self.grid, |cs| cs.eq(&self.target)) {
-                    None => {
-                        ctx.cls();
-                        self.ps.draw(ctx);
-                        ctx.set(self.target.x,self.target.y, BLUE, BLACK, to_cp437('\u{2588}'));
-                        (l, State::Run)
-                    }
-                    Some(target) => {
-                        self.ps.queue.clear();
-                        self.ps.queue.push_back(target);
-                        ctx.cls();
-                        self.ps.draw(ctx);
-                        (l, State::Finish)
-                    }
-                }
-            }
-            (_, State::Finish) => {
-                ctx.set_active_console(3);
-                ctx.print_centered(10, "Path Found !!");
-                (Level::Menu, State::Init)
-            }
-        }
-    }
-    fn level2(&mut self, ctx: &mut BTerm) -> (Level,State) {
-        ctx.set_active_console(2);
-        match self.state {
-            (l, State::Init) => {
-                self.ps.reset();
-                self.ps.queue.push_back(self.target);
-                self.grid.reverse_elevation();
-                (l, State::Run)
-            },
-            (l, State::Run) => {
-                match ctx.key {
-                    Some(VirtualKeyCode::Q) => ctx.quit(),
-                    _ => {}
-                }
-                match self.ps.tick(&self.grid, |cs| 26.eq(self.grid.square(cs).unwrap())) {
-                    None => {
-                        ctx.cls();
-                        self.ps.draw(ctx);
-                        (l, State::Run)
-                    }
-                    Some(target) => {
-                        self.ps.queue.clear();
-                        self.ps.queue.push_back(target);
-                        ctx.cls();
-                        self.ps.draw(ctx);
-                        self.grid.reverse_elevation();
-                        (l, State::Finish)
-                    }
-                }
-            }
-            (_, State::Finish) => {
-                ctx.set_active_console(3);
-                ctx.print_centered(10, "Path Found !!");
-                (Level::Menu, State::Init)
-            }
-        }
+    fn term(&mut self, ctx: &mut BTerm, _: &mut Store) -> (Level, State) {
+        ctx.quit();
+        (Level::Menu, State::Finish)
     }
 }
+
+struct ExerciseOne;
+impl AppLevel for ExerciseOne {
+    fn init(&mut self, _: &mut BTerm,  store: &mut Store) -> (Level, State) {
+        store.ps.reset();
+        store.ps.queue.push_back(store.start);
+        (Level::Level1, State::Run)
+    }
+    fn run(&mut self, ctx: &mut BTerm,  store: &mut Store) -> (Level, State) {
+        match store.ps.tick(&store.grid, |cs| cs.eq(&store.target)) {
+            None => {
+                ctx.cls();
+                store.ps.draw(ctx);
+                ctx.set(store.target.x,store.target.y, BLUE, BLACK, to_cp437('\u{2588}'));
+                (Level::Level1, State::Run)
+            }
+            Some(target) => {
+                store.ps.queue.clear();
+                store.ps.queue.push_back(target);
+                ctx.cls();
+                store.ps.draw(ctx);
+                (Level::Level1, State::Finish)
+            }
+        }
+    }
+    fn term(&mut self, ctx: &mut BTerm,  _: &mut Store) -> (Level, State) {
+        ctx.set_active_console(3);
+        ctx.print_centered(10, "Path Found !!");
+        (Level::Menu, State::Init)
+    }
+}
+
+struct ExerciseTwo;
+impl AppLevel for ExerciseTwo {
+    fn init(&mut self, _: &mut BTerm, store: &mut Store) -> (Level, State) {
+        store.ps.reset();
+        store.ps.queue.push_back(store.target);
+        store.grid.reverse_elevation();
+        (Level::Level2, State::Run)
+    }
+    fn run(&mut self, ctx: &mut BTerm, store: &mut Store) -> (Level, State) {
+        match store.ps.tick(&store.grid, |cs| 26.eq(store.grid.square(cs).unwrap())) {
+            None => {
+                ctx.cls();
+                store.ps.draw(ctx);
+                (Level::Level2, State::Run)
+            }
+            Some(target) => {
+                store.ps.queue.clear();
+                store.ps.queue.push_back(target);
+                ctx.cls();
+                store.ps.draw(ctx);
+                store.grid.reverse_elevation();
+                (Level::Level2, State::Finish)
+            }
+        }
+    }
+    fn term(&mut self, ctx: &mut BTerm, _: &mut Store) -> (Level, State) {
+        ctx.set_active_console(3);
+        ctx.print_centered(10, "Path Found !!");
+        (Level::Menu, State::Init)
+    }
+}
+
+struct App {
+    store: Store,
+    levels: HashMap<Level, Box<dyn AppLevel>>,
+    state: (Level,State)
+}
+impl App {
+    fn init(input: &str) -> App {
+        // parse elevations onto a grid
+        let (grid,start, target) = parse_elevation(input);
+        // set start state for PathSearch
+        let ps = PathSearch::init(&grid);
+        App {
+            store: Store { grid, target, start, ps },
+            levels: HashMap::new(),
+            state: (Level::Menu,State::Init)
+        }
+    }
+    fn register_level(&mut self, level: Level, exec: impl AppLevel + 'static) {
+        self.levels.insert(level, Box::new(exec));
+    }
+}
+
 impl GameState for App {
     fn tick(&mut self, ctx: &mut BTerm) {
-        self.state = match self.state {
-            (Level::Menu, _) => self.menu(ctx),
-            (Level::Level1, _) => self.level1(ctx),
-            (Level::Level2, _) => self.level2(ctx),
+        if let Some(VirtualKeyCode::Q) = ctx.key {
+            ctx.quit()
+        }
+        let level = self.state.0;
+        self.state = match self.state.1 {
+            State::Init => self.levels.get_mut(&level).unwrap().init(ctx, &mut self.store),
+            State::Run => self.levels.get_mut(&level).unwrap().run(ctx, &mut self.store),
+            State::Finish => self.levels.get_mut(&level).unwrap().term(ctx, &mut self.store),
         };
         ctx.set_active_console(3);
         ctx.print(0,0, format!("FPS: {}",ctx.fps));
