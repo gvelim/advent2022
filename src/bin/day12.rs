@@ -94,6 +94,7 @@ impl AppLevel for ExerciseOne {
         (Level::Level1, State::Run)
     }
     fn run(&mut self, ctx: &mut BTerm,  store: &mut Store) -> (Level, State) {
+        ctx.set_active_console(2);
         match store.ps.tick(&store.grid, |cs| cs.eq(&store.target)) {
             None => {
                 ctx.cls();
@@ -126,6 +127,7 @@ impl AppLevel for ExerciseTwo {
         (Level::Level2, State::Run)
     }
     fn run(&mut self, ctx: &mut BTerm, store: &mut Store) -> (Level, State) {
+        ctx.set_active_console(2);
         match store.ps.tick(&store.grid, |cs| 26.eq(store.grid.square(cs).unwrap())) {
             None => {
                 ctx.cls();
