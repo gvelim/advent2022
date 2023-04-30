@@ -3,6 +3,10 @@ use std::fmt::{Debug, Formatter};
 use std::num::ParseIntError;
 use std::str::FromStr;
 use bracket_lib::prelude::*;
+use advent2022::{
+    Coord,
+    app::{App, AppLevel, State}
+};
 
 fn parse_plines(input:&str) -> (Coord, Coord, Vec<Vec<Coord>>) {
     let mut br = Coord{ x: usize::MIN, y: usize::MIN };
@@ -26,7 +30,7 @@ fn parse_plines(input:&str) -> (Coord, Coord, Vec<Vec<Coord>>) {
     (tl, br, plines)
 }
 
-fn main() -> BResult<()>{
+fn main() -> BResult<()> {
 
     // let input = "498,4 -> 498,6 -> 496,6\n503,4 -> 502,4 -> 502,9 -> 494,9".to_string();
     let input = std::fs::read_to_string("src/bin/day14_input.txt").expect("ops!");
@@ -43,11 +47,11 @@ fn main() -> BResult<()>{
         );
 
     // run the sand simulation until we reach the abyss, that is, grain stopped but not settled
-    let start = (500,0).into();
+    let start = (board.centre_x, 0).into();
     board.run(
         start, |g| !g.is_settled()
     );
-    println!("Scenario 1: Grains Rest: {}\n{:?}", board.grains_at_rest()-1, board);
+    println!("Scenario 1: Grains Rest: {}\n{:?}", board.grains_at_rest() - 1, board);
 
     board.empty_sand();
     // add rock floor
@@ -56,51 +60,99 @@ fn main() -> BResult<()>{
     board.run(
         start, |g| g.pos.eq(&start)
     );
-
     println!("Scenario 2: Grains Rest: {}\n{:?}", board.grains_at_rest(), board);
 
-    let mut ctx = BTermBuilder::simple(board.width>>1, board.height>>1)?
+    let mut ctx = BTermBuilder::simple(board.width >> 1, board.height >> 1)?
         .with_simple_console(board.width, board.height, "terminal8x8.png")
         .with_simple_console_no_bg(board.width, board.height, "terminal8x8.png")
-        .with_simple_console_no_bg(board.width>>2, board.height>>2, "terminal8x8.png")
+        .with_simple_console_no_bg(board.width >> 2, board.height >> 2, "terminal8x8.png")
         .with_fps_cap(60f32)
         .with_title("S: Reset, R: Run, G: Grain: Q: Quit")
         .build()?;
 
-    let app = App::init(input.as_str());
-
-    ctx.set_active_console(1);
-    app.board.draw(&mut ctx);
+    let mut app = App::init(
+        Store {
+            board,
+            grains: VecDeque::new(),
+            start
+        },
+        Levels::MENU
+    );
+    app.register_level(Levels::MENU, Menu);
+    app.register_level(Levels::LEVEL1, ExerciseOne {run:false, abyss:false} );
 
     main_loop(ctx, app)
 }
 
-struct App {
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+enum Levels { MENU, LEVEL1, LEVEL2 }
+
+struct Store {
     board: Board<Material>,
     grains: VecDeque<Grain>,
-    start: Coord,
-    run: bool,
+    start: Coord
 }
-impl App {
-    fn init(input: &str) -> App {
-        // parse the board's wall layout
-        let (tl,br, plines) = parse_plines(input);
-        let mut board = Board::new(tl, br);
-        let centre = board.centre_x;
-        // paint layout on the board
-        plines.into_iter()
-            .for_each(|pline| Painter::rock_walls(&mut board, &pline) );
-        App { board, grains: VecDeque::new(), start:(centre,0).into(), run: false }
+struct Menu;
+impl AppLevel for Menu {
+    type GStore = Store;
+    type GLevel = Levels;
+
+    fn init(&mut self, ctx: &mut BTerm, _: &mut Self::GStore) -> (Self::GLevel, State) {
+        ctx.set_active_console(1);
+        ctx.cls_bg(DARK_BLUE);
+        ctx.set_active_console(3);
+        ctx.cls();
+        (Levels::MENU, State::RUN)
+    }
+    fn run(&mut self, ctx: &mut BTerm, _: &mut Self::GStore) -> (Self::GLevel, State) {
+        ctx.set_active_console(3);
+        match ctx.key {
+            Some(VirtualKeyCode::Key1) => { ctx.cls(); (Levels::LEVEL1, State::INIT) },
+            Some(VirtualKeyCode::Key2) => { ctx.cls(); (Levels::LEVEL1, State::INIT) },
+            Some(VirtualKeyCode::Q) => (Levels::MENU, State::FINISH),
+            _ => {
+                ctx.print_centered(10, format!("MENU "));
+                ctx.print_centered(11, format!("=============================="));
+                ctx.print_centered(13, format!("1. Grains settled until first grain fallen to Abyss"));
+                ctx.print_centered(15, format!("2. Grains settled until grain reaches ceiling"));
+                (Levels::MENU, State::RUN)
+            }
+        }
+    }
+    fn term(&mut self, ctx: &mut BTerm, _: &mut Self::GStore) -> (Self::GLevel, State) {
+        ctx.quit();
+        (Levels::MENU, State::FINISH)
     }
 }
+struct ExerciseOne {
+    run: bool,
+    abyss: bool
+}
+impl AppLevel for ExerciseOne {
+    type GStore = Store;
+    type GLevel = Levels;
 
-impl GameState for App {
-    fn tick(&mut self, ctx: &mut BTerm) {
-        let App{ board, grains, start, run } = self;
+    fn init(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
+        store.board.empty_sand();
+        store.grains.clear();
+        if store.board.has_floor() {
+            store.board.toggle_floor();
+        }
+        self.run = false;
+        self.abyss = false;
+        ctx.set_active_console(1);
+        store.board.draw(ctx);
+        (Levels::LEVEL1, State::RUN)
+    }
 
+    fn run(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
+        let Store{ board, grains, start} = store;
+        let mut grains_run = 0usize;
+
+        ctx.set_active_console(2);
         match ctx.key {
             Some(VirtualKeyCode::G) => grains.push_back(Grain::release_grain(*start)),
-            Some(VirtualKeyCode::R) => *run = ! *run,
+            Some(VirtualKeyCode::R) => self.run = ! self.run,
             Some(VirtualKeyCode::Q) => ctx.quit(),
             Some(VirtualKeyCode::W) => {
                 ctx.set_active_console(1);
@@ -113,35 +165,58 @@ impl GameState for App {
             },
             _ => {}
         }
-        if *run { grains.push_back(Grain::release_grain(*start)); }
+        if self.run { grains.push_back(Grain::release_grain(*start)); }
+
         grains.iter_mut()
             .filter(|grain| !grain.is_settled())
             .for_each(|grain|{
                 match (grain.fall(board), grain.settled) {
-                    // grain in motion
-                    (Some(_), _) => {},
                     // grain settled
                     (None, true) => {
                         *board.square_mut(grain.pos).unwrap() = Material::Sand;
                     }
                     // Grain fallen on the abyss
-                    (None, _) => *run =  false,
+                    (None, _) => {
+                        self.abyss = true;
+                        self.run = false;
+                    },
+                    // grain in motion
+                    (Some(_), _) => {},
                 }
             });
-        ctx.set_active_console(2);
+
         ctx.cls();
         grains.iter()
             .for_each(|grain| {
                 let Coord{x,y} = grain.pos;
                 ctx.set( x - board.offset_x, y,
-                        if grain.is_settled() { YELLOW } else { RED },BLACK,
-                        to_cp437('\u{2588}')
+                         if grain.is_settled() { YELLOW } else { grains_run += 1; RED },BLACK,
+                         to_cp437('\u{2588}')
                 );
             });
 
         ctx.set_active_console(3);
-        ctx.print(1,1, format!("Grains @rest: {}  ", board.grains_at_rest()));
-        ctx.print(1,38, format!("FPS: {} ",ctx.fps));
+        ctx.print(1,40, format!("Grains @rest: {}  ", board.grains_at_rest()));
+        ctx.print(1, 15, format!("{:?}",(self.abyss, grains_run)).as_str());
+
+        if self.abyss {
+            (Levels::LEVEL1, State::FINISH)
+        } else {
+            (Levels::LEVEL1, State::RUN)
+        }
+    }
+
+    fn term(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
+        ctx.set_active_console(3);
+        ctx.print(50,11, format!("Total grains settled : {:?}", store.board.grains_at_rest()).as_str());
+        ctx.print(50,13, format!("Press \"M\" for back to Menu").as_str());
+        if let Some(VirtualKeyCode::M) = ctx.key {
+            ctx.set_active_console(2);
+            ctx.cls();
+            (Levels::MENU, State::INIT)
+        } else {
+            (Levels::LEVEL1, State::FINISH)
+        }
     }
 }
 
@@ -161,6 +236,14 @@ impl Board<Material> {
             .filter(|s| Material::Sand.eq(s) )
             .map(|s| *s = Material::Air)
             .count()
+    }
+    fn has_floor(&self) -> bool {
+        let left = Coord { x: self.offset_x, y: self.height-1 };
+        if let Some(Material::Rock) = self.square(left) {
+            true
+        } else {
+            false
+        }
     }
     fn toggle_floor(&mut self) {
         let height = self.height-1;
@@ -290,33 +373,7 @@ impl Debug for Board<Material> {
     }
 }
 
-#[derive(Ord, PartialOrd,Copy, Clone, Eq, PartialEq, Hash)]
-struct Coord {
-    x: usize,
-    y: usize
-}
-impl Debug for Coord {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({},{})",self.x,self.y)
-    }
-}
-impl From<(usize,usize)> for Coord {
-    fn from(p: (usize, usize)) -> Self {
-        Coord { x:p.0, y:p.1 }
-    }
-}
-impl FromStr for Coord {
-    type Err = ParseIntError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut iter = s.trim().split(',').map(usize::from_str );
-        Ok(Coord{
-            x: iter.next().unwrap()?,
-            y: iter.next().unwrap()?,
-        })
-
-    }
-}
 
 /// Generics
 ///
