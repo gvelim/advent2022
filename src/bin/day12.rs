@@ -34,9 +34,9 @@ fn main() -> BResult<()> {
 
     let mut app = App::init(input.as_str());
 
-    app.register_level(Level::Menu, Menu);
-    app.register_level(Level::Level1, ExerciseOne);
-    app.register_level(Level::Level2, ExerciseTwo);
+    app.register_level(Level::MENU, Menu);
+    app.register_level(Level::LEVEL1, ExerciseOne);
+    app.register_level(Level::LEVEL2, ExerciseTwo);
 
     ctx.set_active_console(1);
     app.store.grid.draw(&mut ctx);
@@ -44,9 +44,9 @@ fn main() -> BResult<()> {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash )]
-enum Level {Menu, Level1, Level2}
+enum Level { MENU, LEVEL1, LEVEL2, LEVEL3 }
 #[derive(Copy, Clone, Debug)]
-enum State {Init, Run, Finish}
+enum State { INIT, RUN, FINISH }
 
 struct Store {
     grid: Grid<u8>,
@@ -64,25 +64,25 @@ trait AppLevel {
 struct Menu;
 impl AppLevel for Menu {
     fn init(&mut self, _: &mut BTerm, _: &mut Store) -> (Level, State) {
-        (Level::Menu, State::Run)
+        (Level::MENU, State::RUN)
     }
     fn run(&mut self, ctx: &mut BTerm, _: &mut Store) -> (Level, State) {
         ctx.set_active_console(3);
         match ctx.key {
-            Some(VirtualKeyCode::Key1) => { ctx.cls(); (Level::Level1, State::Init) },
-            Some(VirtualKeyCode::Key2) => { ctx.cls(); (Level::Level2, State::Init) },
-            Some(VirtualKeyCode::Q) => (Level::Menu, State::Finish),
+            Some(VirtualKeyCode::Key1) => { ctx.cls(); (Level::LEVEL1, State::INIT) },
+            Some(VirtualKeyCode::Key2) => { ctx.cls(); (Level::LEVEL2, State::INIT) },
+            Some(VirtualKeyCode::Q) => (Level::MENU, State::FINISH),
             _ => {
                 ctx.print_centered( 42, "Press '1' : Lowest to highest elevation");
                 ctx.print_centered( 44, "Press '2' : Highest to lowest elevation ");
                 ctx.print_centered( 46, "Press 'Q' to exit");
-                (Level::Menu, State::Run)
+                (Level::MENU, State::RUN)
             }
         }
     }
     fn term(&mut self, ctx: &mut BTerm, _: &mut Store) -> (Level, State) {
         ctx.quit();
-        (Level::Menu, State::Finish)
+        (Level::MENU, State::FINISH)
     }
 }
 
@@ -91,7 +91,7 @@ impl AppLevel for ExerciseOne {
     fn init(&mut self, _: &mut BTerm,  store: &mut Store) -> (Level, State) {
         store.ps.reset();
         store.ps.queue.push_back(store.start);
-        (Level::Level1, State::Run)
+        (Level::LEVEL1, State::RUN)
     }
     fn run(&mut self, ctx: &mut BTerm,  store: &mut Store) -> (Level, State) {
         ctx.set_active_console(2);
@@ -100,21 +100,21 @@ impl AppLevel for ExerciseOne {
                 ctx.cls();
                 store.ps.draw(ctx);
                 ctx.set(store.target.x,store.target.y, BLUE, BLACK, to_cp437('\u{2588}'));
-                (Level::Level1, State::Run)
+                (Level::LEVEL1, State::RUN)
             }
             Some(target) => {
                 store.ps.queue.clear();
                 store.ps.queue.push_back(target);
                 ctx.cls();
                 store.ps.draw(ctx);
-                (Level::Level1, State::Finish)
+                (Level::LEVEL1, State::FINISH)
             }
         }
     }
     fn term(&mut self, ctx: &mut BTerm,  _: &mut Store) -> (Level, State) {
         ctx.set_active_console(3);
         ctx.print_centered(10, "Path Found !!");
-        (Level::Menu, State::Init)
+        (Level::MENU, State::INIT)
     }
 }
 
@@ -124,7 +124,7 @@ impl AppLevel for ExerciseTwo {
         store.ps.reset();
         store.ps.queue.push_back(store.target);
         store.grid.reverse_elevation();
-        (Level::Level2, State::Run)
+        (Level::LEVEL2, State::RUN)
     }
     fn run(&mut self, ctx: &mut BTerm, store: &mut Store) -> (Level, State) {
         ctx.set_active_console(2);
@@ -132,7 +132,7 @@ impl AppLevel for ExerciseTwo {
             None => {
                 ctx.cls();
                 store.ps.draw(ctx);
-                (Level::Level2, State::Run)
+                (Level::LEVEL2, State::RUN)
             }
             Some(target) => {
                 store.ps.queue.clear();
@@ -140,14 +140,14 @@ impl AppLevel for ExerciseTwo {
                 ctx.cls();
                 store.ps.draw(ctx);
                 store.grid.reverse_elevation();
-                (Level::Level2, State::Finish)
+                (Level::LEVEL2, State::FINISH)
             }
         }
     }
     fn term(&mut self, ctx: &mut BTerm, _: &mut Store) -> (Level, State) {
         ctx.set_active_console(3);
         ctx.print_centered(10, "Path Found !!");
-        (Level::Menu, State::Init)
+        (Level::MENU, State::INIT)
     }
 }
 
@@ -165,7 +165,7 @@ impl App {
         App {
             store: Store { grid, target, start, ps },
             levels: HashMap::new(),
-            state: (Level::Menu,State::Init)
+            state: (Level::MENU, State::INIT)
         }
     }
     fn register_level(&mut self, level: Level, exec: impl AppLevel + 'static) {
@@ -180,9 +180,15 @@ impl GameState for App {
         }
         let level = self.state.0;
         self.state = match self.state.1 {
-            State::Init => self.levels.get_mut(&level).unwrap().init(ctx, &mut self.store),
-            State::Run => self.levels.get_mut(&level).unwrap().run(ctx, &mut self.store),
-            State::Finish => self.levels.get_mut(&level).unwrap().term(ctx, &mut self.store),
+            State::INIT => self.levels.get_mut(&level)
+                .expect(format!("App::tick() - Level \"{:?}\" not registered", level).as_str())
+                .init(ctx, &mut self.store),
+            State::RUN => self.levels.get_mut(&level)
+                .expect(format!("App::tick() - Level \"{:?}\" not registered", level).as_str())
+                .run(ctx, &mut self.store),
+            State::FINISH => self.levels.get_mut(&level)
+                .expect(format!("App::tick() - Level \"{:?}\" not registered", level).as_str())
+                .term(ctx, &mut self.store),
         };
         ctx.set_active_console(3);
         ctx.print(0,0, format!("FPS: {}",ctx.fps));
