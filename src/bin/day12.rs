@@ -3,7 +3,7 @@ use std::fmt::{Debug, Formatter};
 use bracket_lib::prelude::*;
 use advent2022::{
     Grid, Coord,
-    app::{App, AppLevel, State, Level}
+    app::{App, AppLevel, State}
 };
 
 fn main() -> BResult<()> {
@@ -38,7 +38,7 @@ fn main() -> BResult<()> {
         .build()?;
 
     let ps = PathSearch::init(&grid);
-    let mut app: App<GStore> = App::init(GStore { grid, target, start, ps } );
+    let mut app = App::init(GStore { grid, target, start, ps } , Level::MENU);
 
     app.register_level(Level::MENU, Menu);
     app.register_level(Level::LEVEL1, ExerciseOne);
@@ -49,6 +49,9 @@ fn main() -> BResult<()> {
     main_loop(ctx, app)
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash )]
+pub enum Level { MENU, LEVEL1, LEVEL2 }
+
 struct GStore {
     grid: ElevationGrid,
     target: Coord,
@@ -58,11 +61,12 @@ struct GStore {
 
 struct Menu;
 impl AppLevel for Menu {
-    type Store = GStore;
-    fn init(&mut self, _: &mut BTerm, _: &mut Self::Store) -> (Level, State) {
+    type GStore = GStore;
+    type GLevel = Level;
+    fn init(&mut self, _: &mut BTerm, _: &mut Self::GStore) -> (Self::GLevel, State) {
         (Level::MENU, State::RUN)
     }
-    fn run(&mut self, ctx: &mut BTerm, _: &mut Self::Store) -> (Level, State) {
+    fn run(&mut self, ctx: &mut BTerm, _: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.set_active_console(3);
         match ctx.key {
             Some(VirtualKeyCode::Key1) => { ctx.cls(); (Level::LEVEL1, State::INIT) },
@@ -76,7 +80,7 @@ impl AppLevel for Menu {
             }
         }
     }
-    fn term(&mut self, ctx: &mut BTerm, _: &mut Self::Store) -> (Level, State) {
+    fn term(&mut self, ctx: &mut BTerm, _: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.quit();
         (Level::MENU, State::FINISH)
     }
@@ -84,13 +88,14 @@ impl AppLevel for Menu {
 
 struct ExerciseOne;
 impl AppLevel for ExerciseOne {
-    type Store = GStore;
-    fn init(&mut self, _: &mut BTerm,  store: &mut Self::Store) -> (Level, State) {
+    type GStore = GStore;
+    type GLevel = Level;
+    fn init(&mut self, _: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
         store.ps.reset();
         store.ps.queue.push_back(store.start);
         (Level::LEVEL1, State::RUN)
     }
-    fn run(&mut self, ctx: &mut BTerm,  store: &mut Self::Store) -> (Level, State) {
+    fn run(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.set_active_console(2);
         match store.ps.tick(&store.grid, |cs| cs.eq(&store.target)) {
             None => {
@@ -108,7 +113,7 @@ impl AppLevel for ExerciseOne {
             }
         }
     }
-    fn term(&mut self, ctx: &mut BTerm,  _: &mut Self::Store) -> (Level, State) {
+    fn term(&mut self, ctx: &mut BTerm, _: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.set_active_console(3);
         ctx.print_centered(10, "Path Found !!");
         (Level::MENU, State::INIT)
@@ -117,14 +122,15 @@ impl AppLevel for ExerciseOne {
 
 struct ExerciseTwo;
 impl AppLevel for ExerciseTwo {
-    type Store = GStore;
-    fn init(&mut self, _: &mut BTerm, store: &mut Self::Store) -> (Level, State) {
+    type GStore = GStore;
+    type GLevel = Level;
+    fn init(&mut self, _: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
         store.ps.reset();
         store.ps.queue.push_back(store.target);
         store.grid.reverse_elevation();
         (Level::LEVEL2, State::RUN)
     }
-    fn run(&mut self, ctx: &mut BTerm, store: &mut Self::Store) -> (Level, State) {
+    fn run(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.set_active_console(2);
         match store.ps.tick(&store.grid, |cs| 26.eq(store.grid.grid.square(cs).unwrap())) {
             None => {
@@ -142,7 +148,7 @@ impl AppLevel for ExerciseTwo {
             }
         }
     }
-    fn term(&mut self, ctx: &mut BTerm, _: &mut Self::Store) -> (Level, State) {
+    fn term(&mut self, ctx: &mut BTerm, _: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.set_active_console(3);
         ctx.print_centered(10, "Path Found !!");
         (Level::MENU, State::INIT)
