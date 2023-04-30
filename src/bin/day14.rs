@@ -198,7 +198,6 @@ impl AppLevel for ExerciseOne {
 
         ctx.set_active_console(3);
         ctx.print(0,0, format!("FPS: {}",ctx.fps));
-        ctx.print(0,1, format!("State: {:?}       ",self.state));
         ctx.print(1,40, format!("Grains @rest: {}  ", board.grains_at_rest()));
         ctx.print(1, 15, format!("{:?}",(self.abyss, grains_run)).as_str());
 
@@ -280,7 +279,6 @@ impl AppLevel for ExerciseTwo {
 
         ctx.set_active_console(3);
         ctx.print(0,0, format!("FPS: {}",ctx.fps));
-        ctx.print(0,1, format!("State: {:?}       ",self.state));
         ctx.print(1,40, format!("Grains @rest: {}  ", board.grains_at_rest()));
 
         if self.ceiling {
