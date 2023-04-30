@@ -11,6 +11,7 @@ pub enum State { INIT, RUN, FINISH }
 /// use advent2022::app::{AppLevel, App, State};
 /// use bracket_lib::prelude::*;
 ///
+/// #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 /// enum MyLevels { Menu }
 /// struct MyGlobalStore;
 /// struct Menu;
@@ -19,17 +20,20 @@ pub enum State { INIT, RUN, FINISH }
 ///     type GStore = MyGlobalStore;
 ///     type GLevel = MyLevels;
 ///
-///     fn init(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) { todo!() }
-///     fn run(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) { todo!() }
+///     fn init(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) { (MyLevels::Menu, State::RUN) }
+///     fn run(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
+///         ctx.set_active_console(1);
+///         ctx.print_centered(10, format!("Hellow world!!"));
+///         (MyLevels::Menu, State::RUN)
+///     }
 ///     fn term(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) { todo!() }
 /// }
 ///
+/// fn main() -> BResult<()> {
+///     let ctx = BTermBuilder::simple(80,25)?.with_simple_console(80,25,"terminal8x8.png").build()?;
+///     let mut app = App::init( MyGlobalStore, MyLevels::Menu );
 ///
-/// fn main() -> BTResult<()> {
-///     let mut app = App::init( GStore{}, Level::Menu );
-///     let menu = Menu;
-///
-///     app.register_level( Level::Menu, Menu );
+///     app.register_level( MyLevels::Menu, Menu );
 ///
 ///     main_loop(ctx, app)
 /// }
@@ -98,8 +102,5 @@ impl<Level: 'static, Store: 'static, > GameState for App<Store, Level>
                 .expect(format!("App::tick() - Level \"{:?}\" not registered", level).as_str())
                 .term(ctx, &mut self.store),
         };
-        ctx.set_active_console(3);
-        ctx.print(0,0, format!("FPS: {}",ctx.fps));
-        ctx.print(0,1, format!("State: {:?}       ",self.state));
     }
 }

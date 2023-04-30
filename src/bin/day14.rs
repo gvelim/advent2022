@@ -1,6 +1,5 @@
 use std::collections::{HashMap, VecDeque};
 use std::fmt::{Debug, Formatter};
-use std::num::ParseIntError;
 use std::str::FromStr;
 use bracket_lib::prelude::*;
 use advent2022::{
@@ -62,7 +61,7 @@ fn main() -> BResult<()> {
     );
     println!("Scenario 2: Grains Rest: {}\n{:?}", board.grains_at_rest(), board);
 
-    let mut ctx = BTermBuilder::simple(board.width >> 1, board.height >> 1)?
+    let ctx = BTermBuilder::simple(board.width >> 1, board.height >> 1)?
         .with_simple_console(board.width, board.height, "terminal8x8.png")
         .with_simple_console_no_bg(board.width, board.height, "terminal8x8.png")
         .with_simple_console_no_bg(board.width >> 2, board.height >> 2, "terminal8x8.png")
@@ -198,6 +197,8 @@ impl AppLevel for ExerciseOne {
             });
 
         ctx.set_active_console(3);
+        ctx.print(0,0, format!("FPS: {}",ctx.fps));
+        ctx.print(0,1, format!("State: {:?}       ",self.state));
         ctx.print(1,40, format!("Grains @rest: {}  ", board.grains_at_rest()));
         ctx.print(1, 15, format!("{:?}",(self.abyss, grains_run)).as_str());
 
@@ -278,6 +279,8 @@ impl AppLevel for ExerciseTwo {
             });
 
         ctx.set_active_console(3);
+        ctx.print(0,0, format!("FPS: {}",ctx.fps));
+        ctx.print(0,1, format!("State: {:?}       ",self.state));
         ctx.print(1,40, format!("Grains @rest: {}  ", board.grains_at_rest()));
 
         if self.ceiling {
