@@ -1,8 +1,10 @@
 use std::fmt::{Debug, Formatter};
+use std::num::ParseIntError;
+use std::str::FromStr;
 
 pub mod app;
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Ord, PartialOrd,Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Coord {
     pub x: usize,
     pub y: usize
@@ -15,6 +17,18 @@ impl Debug for Coord {
 impl From<(usize,usize)> for Coord {
     fn from(p: (usize, usize)) -> Self {
         Coord { x:p.0, y:p.1 }
+    }
+}
+impl FromStr for Coord {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut iter = s.trim().split(',').map(usize::from_str );
+        Ok(Coord{
+            x: iter.next().unwrap()?,
+            y: iter.next().unwrap()?,
+        })
+
     }
 }
 
