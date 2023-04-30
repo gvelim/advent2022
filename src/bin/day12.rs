@@ -1,6 +1,10 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};
 use bracket_lib::prelude::*;
+use advent2022::{
+    Coord,
+    app::{App, AppLevel, State, Level}
+};
 
 fn main() -> BResult<()> {
 
@@ -23,6 +27,7 @@ fn main() -> BResult<()> {
 
     // visualise path produced
     grid.visualise_path(path);
+    grid.reverse_elevation();
 
     let mut ctx = BTermBuilder::simple(160,120)?
         .with_simple_console(grid.width,grid.height, "terminal8x8.png")
@@ -32,41 +37,32 @@ fn main() -> BResult<()> {
         .with_title("Day12: Path Search")
         .build()?;
 
-    let mut app = App::init(input.as_str());
+    let ps = PathSearch::init(&grid);
+    let mut app: App<GStore> = App::init(GStore { grid, target, start, ps } );
 
     app.register_level(Level::MENU, Menu);
     app.register_level(Level::LEVEL1, ExerciseOne);
     app.register_level(Level::LEVEL2, ExerciseTwo);
 
     ctx.set_active_console(1);
-    app.store.grid.draw(&mut ctx);
+    app.store().grid.draw(&mut ctx);
     main_loop(ctx, app)
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash )]
-enum Level { MENU, LEVEL1, LEVEL2, LEVEL3 }
-#[derive(Copy, Clone, Debug)]
-enum State { INIT, RUN, FINISH }
-
-struct Store {
+struct GStore {
     grid: Grid<u8>,
     target: Coord,
     start: Coord,
     ps: PathSearch,
 }
 
-trait AppLevel {
-    fn init(&mut self, ctx: &mut BTerm, store: &mut Store) -> (Level, State);
-    fn run(&mut self, ctx: &mut BTerm, store: &mut Store) -> (Level, State);
-    fn term(&mut self, ctx: &mut BTerm, store: &mut Store) -> (Level, State);
-}
-
 struct Menu;
 impl AppLevel for Menu {
-    fn init(&mut self, _: &mut BTerm, _: &mut Store) -> (Level, State) {
+    type Store = GStore;
+    fn init(&mut self, _: &mut BTerm, _: &mut Self::Store) -> (Level, State) {
         (Level::MENU, State::RUN)
     }
-    fn run(&mut self, ctx: &mut BTerm, _: &mut Store) -> (Level, State) {
+    fn run(&mut self, ctx: &mut BTerm, _: &mut Self::Store) -> (Level, State) {
         ctx.set_active_console(3);
         match ctx.key {
             Some(VirtualKeyCode::Key1) => { ctx.cls(); (Level::LEVEL1, State::INIT) },
@@ -80,7 +76,7 @@ impl AppLevel for Menu {
             }
         }
     }
-    fn term(&mut self, ctx: &mut BTerm, _: &mut Store) -> (Level, State) {
+    fn term(&mut self, ctx: &mut BTerm, _: &mut Self::Store) -> (Level, State) {
         ctx.quit();
         (Level::MENU, State::FINISH)
     }
@@ -88,12 +84,13 @@ impl AppLevel for Menu {
 
 struct ExerciseOne;
 impl AppLevel for ExerciseOne {
-    fn init(&mut self, _: &mut BTerm,  store: &mut Store) -> (Level, State) {
+    type Store = GStore;
+    fn init(&mut self, _: &mut BTerm,  store: &mut Self::Store) -> (Level, State) {
         store.ps.reset();
         store.ps.queue.push_back(store.start);
         (Level::LEVEL1, State::RUN)
     }
-    fn run(&mut self, ctx: &mut BTerm,  store: &mut Store) -> (Level, State) {
+    fn run(&mut self, ctx: &mut BTerm,  store: &mut Self::Store) -> (Level, State) {
         ctx.set_active_console(2);
         match store.ps.tick(&store.grid, |cs| cs.eq(&store.target)) {
             None => {
@@ -111,7 +108,7 @@ impl AppLevel for ExerciseOne {
             }
         }
     }
-    fn term(&mut self, ctx: &mut BTerm,  _: &mut Store) -> (Level, State) {
+    fn term(&mut self, ctx: &mut BTerm,  _: &mut Self::Store) -> (Level, State) {
         ctx.set_active_console(3);
         ctx.print_centered(10, "Path Found !!");
         (Level::MENU, State::INIT)
@@ -120,13 +117,14 @@ impl AppLevel for ExerciseOne {
 
 struct ExerciseTwo;
 impl AppLevel for ExerciseTwo {
-    fn init(&mut self, _: &mut BTerm, store: &mut Store) -> (Level, State) {
+    type Store = GStore;
+    fn init(&mut self, _: &mut BTerm, store: &mut Self::Store) -> (Level, State) {
         store.ps.reset();
         store.ps.queue.push_back(store.target);
         store.grid.reverse_elevation();
         (Level::LEVEL2, State::RUN)
     }
-    fn run(&mut self, ctx: &mut BTerm, store: &mut Store) -> (Level, State) {
+    fn run(&mut self, ctx: &mut BTerm, store: &mut Self::Store) -> (Level, State) {
         ctx.set_active_console(2);
         match store.ps.tick(&store.grid, |cs| 26.eq(store.grid.square(cs).unwrap())) {
             None => {
@@ -144,57 +142,13 @@ impl AppLevel for ExerciseTwo {
             }
         }
     }
-    fn term(&mut self, ctx: &mut BTerm, _: &mut Store) -> (Level, State) {
+    fn term(&mut self, ctx: &mut BTerm, _: &mut Self::Store) -> (Level, State) {
         ctx.set_active_console(3);
         ctx.print_centered(10, "Path Found !!");
         (Level::MENU, State::INIT)
     }
 }
 
-struct App {
-    store: Store,
-    levels: HashMap<Level, Box<dyn AppLevel>>,
-    state: (Level,State)
-}
-impl App {
-    fn init(input: &str) -> App {
-        // parse elevations onto a grid
-        let (grid,start, target) = parse_elevation(input);
-        // set start state for PathSearch
-        let ps = PathSearch::init(&grid);
-        App {
-            store: Store { grid, target, start, ps },
-            levels: HashMap::new(),
-            state: (Level::MENU, State::INIT)
-        }
-    }
-    fn register_level(&mut self, level: Level, exec: impl AppLevel + 'static) {
-        self.levels.insert(level, Box::new(exec));
-    }
-}
-
-impl GameState for App {
-    fn tick(&mut self, ctx: &mut BTerm) {
-        if let Some(VirtualKeyCode::Q) = ctx.key {
-            ctx.quit()
-        }
-        let level = self.state.0;
-        self.state = match self.state.1 {
-            State::INIT => self.levels.get_mut(&level)
-                .expect(format!("App::tick() - Level \"{:?}\" not registered", level).as_str())
-                .init(ctx, &mut self.store),
-            State::RUN => self.levels.get_mut(&level)
-                .expect(format!("App::tick() - Level \"{:?}\" not registered", level).as_str())
-                .run(ctx, &mut self.store),
-            State::FINISH => self.levels.get_mut(&level)
-                .expect(format!("App::tick() - Level \"{:?}\" not registered", level).as_str())
-                .term(ctx, &mut self.store),
-        };
-        ctx.set_active_console(3);
-        ctx.print(0,0, format!("FPS: {}",ctx.fps));
-        ctx.print(0,1, format!("State: {:?}       ",self.state));
-    }
-}
 
 fn parse_elevation(data: &str) -> (Grid<u8>, Coord, Coord) {
     let width = data.lines().next().unwrap().len();
@@ -218,65 +172,6 @@ fn parse_elevation(data: &str) -> (Grid<u8>, Coord, Coord) {
         }
     }
     (grid, start, finish)
-}
-
-#[derive(Copy, Clone, Eq, PartialEq)]
-struct Coord {
-    x: usize,
-    y: usize
-}
-impl Debug for Coord {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({},{})",self.x,self.y)
-    }
-}
-impl From<(usize,usize)> for Coord {
-    fn from(p: (usize, usize)) -> Self {
-        Coord { x:p.0, y:p.1 }
-    }
-}
-
-struct Grid<T> {
-    width: usize,
-    height: usize,
-    grid: Vec<T>,
-}
-impl<T> Grid<T>
-    where T : Default + Copy {
-    fn new(width: usize, height: usize) -> Grid<T> {
-        Grid {
-            height,
-            width,
-            grid: vec![T::default(); width * height],
-        }
-    }
-    fn in_bounds(&self, p:Coord) -> bool {
-        p.x < self.width && p.y < self.height
-    }
-    fn square(&self, p: Coord) -> Option<&T> {
-        if !self.in_bounds(p) {
-            return None
-        }
-        Some(&self.grid[p.y * self.width + p.x])
-    }
-    fn square_mut(&mut self, p: Coord) -> Option<&mut T> {
-        if !self.in_bounds(p) {
-            return None
-        }
-        Some(&mut self.grid[p.y * self.width + p.x])
-    }
-    fn neighbouring(&self, cs:Coord) -> impl Iterator<Item=(Coord,&'_ T)> {
-        let delta = [(0, -1), (1, 0), (-1, 0), (0, 1)];
-        delta.into_iter()
-            .filter_map(move |d|{
-                let ns = Coord {
-                    x: cs.x.saturating_add_signed(d.0),
-                    y: cs.y.saturating_add_signed(d.1)
-                };
-                self.square(ns)
-                    .map(|val| (ns,val) )
-            })
-    }
 }
 
 struct PathSearch {
@@ -446,5 +341,48 @@ impl Debug for Grid<bool> {
             writeln!(f).expect("failed in y");
         });
         Ok(())
+    }
+}
+
+pub struct Grid<T> {
+    pub width: usize,
+    pub height: usize,
+    pub grid: Vec<T>,
+}
+impl<T> Grid<T>
+    where T : Default + Copy {
+    pub fn new(width: usize, height: usize) -> Grid<T> {
+        Grid {
+            height,
+            width,
+            grid: vec![T::default(); width * height],
+        }
+    }
+    pub fn in_bounds(&self, p:Coord) -> bool {
+        p.x < self.width && p.y < self.height
+    }
+    pub fn square(&self, p: Coord) -> Option<&T> {
+        if !self.in_bounds(p) {
+            return None
+        }
+        Some(&self.grid[p.y * self.width + p.x])
+    }
+    pub fn square_mut(&mut self, p: Coord) -> Option<&mut T> {
+        if !self.in_bounds(p) {
+            return None
+        }
+        Some(&mut self.grid[p.y * self.width + p.x])
+    }
+    pub fn neighbouring(&self, cs:Coord) -> impl Iterator<Item=(Coord,&'_ T)> {
+        let delta = [(0, -1), (1, 0), (-1, 0), (0, 1)];
+        delta.into_iter()
+            .filter_map(move |d|{
+                let ns = Coord {
+                    x: cs.x.saturating_add_signed(d.0),
+                    y: cs.y.saturating_add_signed(d.1)
+                };
+                self.square(ns)
+                    .map(|val| (ns,val) )
+            })
     }
 }
