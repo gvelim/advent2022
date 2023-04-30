@@ -2,8 +2,8 @@ use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};
 use bracket_lib::prelude::*;
 use advent2022::{
-    Coord,
-    app::{App, AppLevel, State, Level}
+    Grid, Coord,
+    app::{App, AppLevel, State}
 };
 
 fn main() -> BResult<()> {
@@ -23,22 +23,22 @@ fn main() -> BResult<()> {
     grid.reverse_elevation();
 
     // find path with closure fn() goal set as reaching elevation(26) = a
-    let path = grid.shortest_path(target, |cs| 26.eq(grid.square(cs).unwrap()));
+    let path = grid.shortest_path(target, |cs| 26.eq(grid.grid.square(cs).unwrap()));
 
     // visualise path produced
     grid.visualise_path(path);
     grid.reverse_elevation();
 
     let mut ctx = BTermBuilder::simple(160,120)?
-        .with_simple_console(grid.width,grid.height, "terminal8x8.png")
-        .with_simple_console_no_bg(grid.width,grid.height, "terminal8x8.png")
-        .with_simple_console_no_bg(grid.width,grid.height, "terminal8x8.png")
+        .with_simple_console(grid.width(),grid.height(), "terminal8x8.png")
+        .with_simple_console_no_bg(grid.width(),grid.height(), "terminal8x8.png")
+        .with_simple_console_no_bg(grid.width(),grid.height(), "terminal8x8.png")
         .with_fps_cap(640f32)
         .with_title("Day12: Path Search")
         .build()?;
 
     let ps = PathSearch::init(&grid);
-    let mut app: App<GStore> = App::init(GStore { grid, target, start, ps } );
+    let mut app = App::init(GStore { grid, target, start, ps } , Level::MENU);
 
     app.register_level(Level::MENU, Menu);
     app.register_level(Level::LEVEL1, ExerciseOne);
@@ -49,8 +49,11 @@ fn main() -> BResult<()> {
     main_loop(ctx, app)
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash )]
+pub enum Level { MENU, LEVEL1, LEVEL2 }
+
 struct GStore {
-    grid: Grid<u8>,
+    grid: ElevationGrid,
     target: Coord,
     start: Coord,
     ps: PathSearch,
@@ -58,11 +61,12 @@ struct GStore {
 
 struct Menu;
 impl AppLevel for Menu {
-    type Store = GStore;
-    fn init(&mut self, _: &mut BTerm, _: &mut Self::Store) -> (Level, State) {
+    type GStore = GStore;
+    type GLevel = Level;
+    fn init(&mut self, _: &mut BTerm, _: &mut Self::GStore) -> (Self::GLevel, State) {
         (Level::MENU, State::RUN)
     }
-    fn run(&mut self, ctx: &mut BTerm, _: &mut Self::Store) -> (Level, State) {
+    fn run(&mut self, ctx: &mut BTerm, _: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.set_active_console(3);
         match ctx.key {
             Some(VirtualKeyCode::Key1) => { ctx.cls(); (Level::LEVEL1, State::INIT) },
@@ -76,7 +80,7 @@ impl AppLevel for Menu {
             }
         }
     }
-    fn term(&mut self, ctx: &mut BTerm, _: &mut Self::Store) -> (Level, State) {
+    fn term(&mut self, ctx: &mut BTerm, _: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.quit();
         (Level::MENU, State::FINISH)
     }
@@ -84,13 +88,14 @@ impl AppLevel for Menu {
 
 struct ExerciseOne;
 impl AppLevel for ExerciseOne {
-    type Store = GStore;
-    fn init(&mut self, _: &mut BTerm,  store: &mut Self::Store) -> (Level, State) {
+    type GStore = GStore;
+    type GLevel = Level;
+    fn init(&mut self, _: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
         store.ps.reset();
         store.ps.queue.push_back(store.start);
         (Level::LEVEL1, State::RUN)
     }
-    fn run(&mut self, ctx: &mut BTerm,  store: &mut Self::Store) -> (Level, State) {
+    fn run(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.set_active_console(2);
         match store.ps.tick(&store.grid, |cs| cs.eq(&store.target)) {
             None => {
@@ -108,7 +113,7 @@ impl AppLevel for ExerciseOne {
             }
         }
     }
-    fn term(&mut self, ctx: &mut BTerm,  _: &mut Self::Store) -> (Level, State) {
+    fn term(&mut self, ctx: &mut BTerm, _: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.set_active_console(3);
         ctx.print_centered(10, "Path Found !!");
         (Level::MENU, State::INIT)
@@ -117,16 +122,17 @@ impl AppLevel for ExerciseOne {
 
 struct ExerciseTwo;
 impl AppLevel for ExerciseTwo {
-    type Store = GStore;
-    fn init(&mut self, _: &mut BTerm, store: &mut Self::Store) -> (Level, State) {
+    type GStore = GStore;
+    type GLevel = Level;
+    fn init(&mut self, _: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
         store.ps.reset();
         store.ps.queue.push_back(store.target);
         store.grid.reverse_elevation();
         (Level::LEVEL2, State::RUN)
     }
-    fn run(&mut self, ctx: &mut BTerm, store: &mut Self::Store) -> (Level, State) {
+    fn run(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.set_active_console(2);
-        match store.ps.tick(&store.grid, |cs| 26.eq(store.grid.square(cs).unwrap())) {
+        match store.ps.tick(&store.grid, |cs| 26.eq(store.grid.grid.square(cs).unwrap())) {
             None => {
                 ctx.cls();
                 store.ps.draw(ctx);
@@ -142,7 +148,7 @@ impl AppLevel for ExerciseTwo {
             }
         }
     }
-    fn term(&mut self, ctx: &mut BTerm, _: &mut Self::Store) -> (Level, State) {
+    fn term(&mut self, ctx: &mut BTerm, _: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.set_active_console(3);
         ctx.print_centered(10, "Path Found !!");
         (Level::MENU, State::INIT)
@@ -150,7 +156,7 @@ impl AppLevel for ExerciseTwo {
 }
 
 
-fn parse_elevation(data: &str) -> (Grid<u8>, Coord, Coord) {
+fn parse_elevation(data: &str) -> (ElevationGrid, Coord, Coord) {
     let width = data.lines().next().unwrap().len();
     let height = data.lines().count();
     let mut grid = Grid::new(width,height);
@@ -171,7 +177,7 @@ fn parse_elevation(data: &str) -> (Grid<u8>, Coord, Coord) {
             }
         }
     }
-    (grid, start, finish)
+    (ElevationGrid { grid }, start, finish)
 }
 
 struct PathSearch {
@@ -180,10 +186,10 @@ struct PathSearch {
     path: Vec<Coord>
 }
 impl PathSearch {
-    fn init(grid: &Grid<u8>) -> PathSearch {
+    fn init(grid: &ElevationGrid) -> PathSearch {
         PathSearch {
             queue: VecDeque::<Coord>::new(),
-            visited: Grid::new(grid.width, grid.height),
+            visited: Grid::new(grid.width(), grid.height()),
             path: Vec::<_>::new()
         }
     }
@@ -192,7 +198,7 @@ impl PathSearch {
         self.visited.grid.iter_mut().for_each(|val| *val = (false, None) );
         self.path.clear();
     }
-    fn tick<F>(&mut self, grid: &Grid<u8>, goal: F) -> Option<Coord> where F: Fn(Coord)->bool {
+    fn tick<F>(&mut self, grid: &ElevationGrid, goal: F) -> Option<Coord> where F: Fn(Coord)->bool {
         let Some(cs) = self.queue.pop_front() else { return None };
 
         // position matches target
@@ -202,11 +208,11 @@ impl PathSearch {
         // mark square as visited
         self.visited.square_mut(cs).unwrap().0 = true;
 
-        let &square = grid.square(cs).unwrap();
+        let &square = grid.grid.square(cs).unwrap();
 
         // evaluate neighbour squares and
         // push to the queue if the have elevation delta <= 1
-        grid.neighbouring(cs)
+        grid.grid.neighbouring(cs)
             .for_each(|(ns, &elevation)| {
                 if let Some((false, None)) = self.visited.square(ns) {
                     if elevation <= square + 1 {
@@ -249,18 +255,24 @@ impl Iterator for PathIter<'_> {
     }
 }
 
-impl Grid<u8> {
+struct ElevationGrid {
+    grid: Grid<u8>
+}
+
+impl ElevationGrid {
+    fn width(&self) -> usize { self.grid.width }
+    fn height(&self) -> usize { self.grid.height }
     fn reverse_elevation(&mut self) {
-        let &max = self.grid.iter().max().unwrap();
-        self.grid.iter_mut()
+        let &max = self.grid.grid.iter().max().unwrap();
+        self.grid.grid.iter_mut()
             .map(|val|{
                 *val = max - *val;
             })
             .all(|_| true);
     }
     fn visualise_path(&self, path:Vec<Coord>) {
-        let mut gpath: Grid<u8> = Grid::new(self.width, self.height);
-        path.iter().for_each(|&a| *gpath.square_mut(a).unwrap() = *self.square(a).unwrap() );
+        let mut gpath= ElevationGrid { grid: Grid::new(self.width(), self.height()) };
+        path.iter().for_each(|&a| *gpath.grid.square_mut(a).unwrap() = *self.grid.square(a).unwrap() );
         println!("Path length: {}\n{:?}",path.len(),gpath);
     }
     fn shortest_path<F>(&self, start: Coord, goal:F ) -> Vec<Coord> where F: Fn(Coord)->bool {
@@ -288,11 +300,11 @@ impl Grid<u8> {
             // mark square as visited
             ps.visited.square_mut(cs).unwrap().0 = true;
 
-            let &square = self.square(cs).unwrap();
+            let &square = self.grid.square(cs).unwrap();
 
             // evaluate neighbour squares and
             // push to the queue if the have elevation delta <= 1
-            self.neighbouring(cs)
+            self.grid.neighbouring(cs)
                 .for_each(|(ns, &elevation)| {
                     if let Some((false, None)) = ps.visited.square(ns) {
                         if elevation <= square + 1 {
@@ -307,20 +319,20 @@ impl Grid<u8> {
     }
     fn draw(&self, ctx: &mut BTerm) {
         let rgb: Vec<_> = RgbLerp::new(CADETBLUE.into(), WHITESMOKE.into(), 27).collect();
-        (0..self.height).for_each(|y|{
-            (0..self.width).for_each(|x|
-                ctx.set_bg(x, y, self.square((x, y).into()).map(|&cell| rgb[cell as usize]).unwrap_or(BLACK.into()))
+        (0..self.height()).for_each(|y|{
+            (0..self.width()).for_each(|x|
+                ctx.set_bg(x, y, self.grid.square((x, y).into()).map(|&cell| rgb[cell as usize]).unwrap_or(BLACK.into()))
             );
         });
     }
 }
 
-impl Debug for Grid<u8> {
+impl Debug for ElevationGrid {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        (0..self.height).for_each(|y|{
-            (0..self.width).for_each(|x|
+        (0..self.height()).for_each(|y|{
+            (0..self.width()).for_each(|x|
                 write!(f, "{:^2}",
-                       self.square((x, y).into())
+                       self.grid.square((x, y).into())
                            .map(|&cell| match cell { 0 => '.', _=> 'x'})
                            .expect("TODO: panic message")
                 ).expect("failed in x")
@@ -328,61 +340,5 @@ impl Debug for Grid<u8> {
             writeln!(f).expect("failed in y");
         });
         Ok(())
-    }
-}
-
-impl Debug for Grid<bool> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        (0..self.height).for_each(|y|{
-            (0..self.width).for_each(|x| {
-                let &cell = self.square((x, y).into()).unwrap();
-                write!(f, "{:^2}",if cell {'*'} else {'.'} ).expect("failed in x");
-            });
-            writeln!(f).expect("failed in y");
-        });
-        Ok(())
-    }
-}
-
-pub struct Grid<T> {
-    pub width: usize,
-    pub height: usize,
-    pub grid: Vec<T>,
-}
-impl<T> Grid<T>
-    where T : Default + Copy {
-    pub fn new(width: usize, height: usize) -> Grid<T> {
-        Grid {
-            height,
-            width,
-            grid: vec![T::default(); width * height],
-        }
-    }
-    pub fn in_bounds(&self, p:Coord) -> bool {
-        p.x < self.width && p.y < self.height
-    }
-    pub fn square(&self, p: Coord) -> Option<&T> {
-        if !self.in_bounds(p) {
-            return None
-        }
-        Some(&self.grid[p.y * self.width + p.x])
-    }
-    pub fn square_mut(&mut self, p: Coord) -> Option<&mut T> {
-        if !self.in_bounds(p) {
-            return None
-        }
-        Some(&mut self.grid[p.y * self.width + p.x])
-    }
-    pub fn neighbouring(&self, cs:Coord) -> impl Iterator<Item=(Coord,&'_ T)> {
-        let delta = [(0, -1), (1, 0), (-1, 0), (0, 1)];
-        delta.into_iter()
-            .filter_map(move |d|{
-                let ns = Coord {
-                    x: cs.x.saturating_add_signed(d.0),
-                    y: cs.y.saturating_add_signed(d.1)
-                };
-                self.square(ns)
-                    .map(|val| (ns,val) )
-            })
     }
 }
