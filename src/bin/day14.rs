@@ -80,6 +80,7 @@ fn main() -> BResult<()> {
     );
     app.register_level(Levels::MENU, Menu);
     app.register_level(Levels::LEVEL1, ExerciseOne {run:false, abyss:false} );
+    app.register_level(Levels::LEVEL2, ExerciseTwo {ceiling:false} );
 
     main_loop(ctx, app)
 }
@@ -92,6 +93,7 @@ struct Store {
     grains: VecDeque<Grain>,
     start: Coord
 }
+
 struct Menu;
 impl AppLevel for Menu {
     type GStore = Store;
@@ -108,7 +110,7 @@ impl AppLevel for Menu {
         ctx.set_active_console(3);
         match ctx.key {
             Some(VirtualKeyCode::Key1) => { ctx.cls(); (Levels::LEVEL1, State::INIT) },
-            Some(VirtualKeyCode::Key2) => { ctx.cls(); (Levels::LEVEL1, State::INIT) },
+            Some(VirtualKeyCode::Key2) => { ctx.cls(); (Levels::LEVEL2, State::INIT) },
             Some(VirtualKeyCode::Q) => (Levels::MENU, State::FINISH),
             _ => {
                 ctx.print_centered(10, format!("MENU "));
@@ -124,6 +126,7 @@ impl AppLevel for Menu {
         (Levels::MENU, State::FINISH)
     }
 }
+
 struct ExerciseOne {
     run: bool,
     abyss: bool
@@ -144,7 +147,6 @@ impl AppLevel for ExerciseOne {
         store.board.draw(ctx);
         (Levels::LEVEL1, State::RUN)
     }
-
     fn run(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
         let Store{ board, grains, start} = store;
         let mut grains_run = 0usize;
@@ -205,7 +207,6 @@ impl AppLevel for ExerciseOne {
             (Levels::LEVEL1, State::RUN)
         }
     }
-
     fn term(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.set_active_console(3);
         ctx.print(50,11, format!("Total grains settled : {:?}", store.board.grains_at_rest()).as_str());
@@ -216,6 +217,86 @@ impl AppLevel for ExerciseOne {
             (Levels::MENU, State::INIT)
         } else {
             (Levels::LEVEL1, State::FINISH)
+        }
+    }
+}
+
+struct ExerciseTwo {
+    ceiling: bool,
+}
+impl AppLevel for ExerciseTwo {
+    type GStore = Store;
+    type GLevel = Levels;
+
+    fn init(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
+        store.board.empty_sand();
+        store.grains.clear();
+        if !store.board.has_floor() {
+            store.board.toggle_floor();
+        }
+        ctx.set_active_console(1);
+        store.board.draw(ctx);
+        self.ceiling = false;
+        (Levels::LEVEL2, State::RUN)
+    }
+    fn run(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
+        let Store{ board, grains, start} = store;
+        let mut grains_run = 0usize;
+
+        ctx.set_active_console(2);
+        match ctx.key {
+            Some(VirtualKeyCode::Q) => ctx.quit(),
+            Some(VirtualKeyCode::S) => {
+                board.empty_sand();
+                grains.clear();
+            },
+            _ => {}
+        }
+        grains.push_back(Grain::release_grain(*start));
+
+        grains.iter_mut()
+            .filter(|grain| !grain.is_settled())
+            .for_each(|grain|{
+                if let (None, true) = (grain.fall(board), grain.settled) {
+                    *board.square_mut(grain.pos).unwrap() = Material::Sand;
+                    // grain settled at start position ?
+                    if grain.pos.eq(&store.start) {
+                        // we've reached the top hence we exit
+                        self.ceiling = true;
+                    }
+                }
+            });
+
+        ctx.cls();
+        grains.iter()
+            .for_each(|grain| {
+                let Coord{x,y} = grain.pos;
+                ctx.set( x - board.offset_x, y,
+                         if grain.is_settled() { YELLOW } else { grains_run += 1; RED },BLACK,
+                         to_cp437('\u{2588}')
+                );
+            });
+
+        ctx.set_active_console(3);
+        ctx.print(1,40, format!("Grains @rest: {}  ", board.grains_at_rest()));
+
+        if self.ceiling {
+            (Levels::LEVEL2, State::FINISH)
+        } else {
+            (Levels::LEVEL2, State::RUN)
+        }
+    }
+    fn term(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
+        ctx.set_active_console(3);
+        ctx.print(50,11, format!("Total grains settled : {:?}", store.board.grains_at_rest()).as_str());
+        ctx.print(50,13, format!("Press \"M\" for back to Menu").as_str());
+        if let Some(VirtualKeyCode::M) = ctx.key {
+            store.board.toggle_floor();
+            ctx.set_active_console(2);
+            ctx.cls();
+            (Levels::MENU, State::INIT)
+        } else {
+            (Levels::LEVEL2, State::FINISH)
         }
     }
 }
@@ -372,8 +453,6 @@ impl Debug for Board<Material> {
         Ok(())
     }
 }
-
-
 
 /// Generics
 ///
