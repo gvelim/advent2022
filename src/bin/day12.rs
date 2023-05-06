@@ -23,7 +23,7 @@ fn main() -> BResult<()> {
     grid.reverse_elevation();
 
     // find path with closure fn() goal set as reaching elevation(26) = a
-    let path = grid.shortest_path(target, |cs| 26.eq(grid.grid.square(cs).unwrap()));
+    let path = grid.shortest_path(target, |cs| 26.eq(grid.0.square(cs).unwrap()));
 
     // visualise path produced
     grid.visualise_path(path);
@@ -132,7 +132,7 @@ impl AppLevel for ExerciseTwo {
     }
     fn run(&mut self, ctx: &mut BTerm, store: &mut Self::GStore) -> (Self::GLevel, State) {
         ctx.set_active_console(2);
-        match store.ps.tick(&store.grid, |cs| 26.eq(store.grid.grid.square(cs).unwrap())) {
+        match store.ps.tick(&store.grid, |cs| 26.eq(store.grid.0.square(cs).unwrap())) {
             None => {
                 ctx.cls();
                 store.ps.draw(ctx);
@@ -155,7 +155,6 @@ impl AppLevel for ExerciseTwo {
     }
 }
 
-
 fn parse_elevation(data: &str) -> (ElevationGrid, Coord, Coord) {
     let width = data.lines().next().unwrap().len();
     let height = data.lines().count();
@@ -177,7 +176,7 @@ fn parse_elevation(data: &str) -> (ElevationGrid, Coord, Coord) {
             }
         }
     }
-    (ElevationGrid { grid }, start, finish)
+    (ElevationGrid(grid), start, finish)
 }
 
 struct PathSearch {
@@ -208,11 +207,11 @@ impl PathSearch {
         // mark square as visited
         self.visited.square_mut(cs).unwrap().0 = true;
 
-        let &square = grid.grid.square(cs).unwrap();
+        let &square = grid.0.square(cs).unwrap();
 
         // evaluate neighbour squares and
         // push to the queue if the have elevation delta <= 1
-        grid.grid.neighbouring(cs)
+        grid.0.neighbouring(cs)
             .for_each(|(ns, &elevation)| {
                 if let Some((false, None)) = self.visited.square(ns) {
                     if elevation <= square + 1 {
@@ -255,24 +254,22 @@ impl Iterator for PathIter<'_> {
     }
 }
 
-struct ElevationGrid {
-    grid: Grid<u8>
-}
+struct ElevationGrid(Grid<u8>);
 
 impl ElevationGrid {
-    fn width(&self) -> usize { self.grid.width }
-    fn height(&self) -> usize { self.grid.height }
+    fn width(&self) -> usize { self.0.width }
+    fn height(&self) -> usize { self.0.height }
     fn reverse_elevation(&mut self) {
-        let &max = self.grid.grid.iter().max().unwrap();
-        self.grid.grid.iter_mut()
+        let &max = self.0.iter().max().unwrap();
+        self.0.iter_mut()
             .map(|val|{
                 *val = max - *val;
             })
             .all(|_| true);
     }
     fn visualise_path(&self, path:Vec<Coord>) {
-        let mut gpath= ElevationGrid { grid: Grid::new(self.width(), self.height()) };
-        path.iter().for_each(|&a| *gpath.grid.square_mut(a).unwrap() = *self.grid.square(a).unwrap() );
+        let mut gpath= ElevationGrid(Grid::new(self.width(), self.height()) );
+        path.iter().for_each(|&a| *gpath.0.square_mut(a).unwrap() = *self.0.square(a).unwrap() );
         println!("Path length: {}\n{:?}",path.len(),gpath);
     }
     fn shortest_path<F>(&self, start: Coord, goal:F ) -> Vec<Coord> where F: Fn(Coord)->bool {
@@ -300,11 +297,11 @@ impl ElevationGrid {
             // mark square as visited
             ps.visited.square_mut(cs).unwrap().0 = true;
 
-            let &square = self.grid.square(cs).unwrap();
+            let &square = self.0.square(cs).unwrap();
 
             // evaluate neighbour squares and
             // push to the queue if the have elevation delta <= 1
-            self.grid.neighbouring(cs)
+            self.0.neighbouring(cs)
                 .for_each(|(ns, &elevation)| {
                     if let Some((false, None)) = ps.visited.square(ns) {
                         if elevation <= square + 1 {
@@ -321,7 +318,7 @@ impl ElevationGrid {
         let rgb: Vec<_> = RgbLerp::new(CADETBLUE.into(), WHITESMOKE.into(), 27).collect();
         (0..self.height()).for_each(|y|{
             (0..self.width()).for_each(|x|
-                ctx.set_bg(x, y, self.grid.square((x, y).into()).map(|&cell| rgb[cell as usize]).unwrap_or(BLACK.into()))
+                ctx.set_bg(x, y, self.0.square((x, y).into()).map(|&cell| rgb[cell as usize]).unwrap_or(BLACK.into()))
             );
         });
     }
@@ -332,7 +329,7 @@ impl Debug for ElevationGrid {
         (0..self.height()).for_each(|y|{
             (0..self.width()).for_each(|x|
                 write!(f, "{:^2}",
-                       self.grid.square((x, y).into())
+                       self.0.square((x, y).into())
                            .map(|&cell| match cell { 0 => '.', _=> 'x'})
                            .expect("TODO: panic message")
                 ).expect("failed in x")

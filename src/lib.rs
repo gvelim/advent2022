@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Formatter};
 use std::num::ParseIntError;
+use std::slice::{Iter, IterMut};
 use std::str::FromStr;
 
 pub mod app;
@@ -60,6 +61,12 @@ impl<T> Grid<T>
             return None
         }
         Some(&mut self.grid[p.y * self.width + p.x])
+    }
+    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
+        self.grid.iter_mut()
+    }
+    pub fn iter(&self) -> Iter<'_, T> {
+        self.grid.iter()
     }
     pub fn neighbouring(&self, cs:Coord) -> impl Iterator<Item=(Coord,&'_ T)> {
         let delta = [(0, -1), (1, 0), (-1, 0), (0, 1)];
