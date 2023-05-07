@@ -3,6 +3,7 @@ use std::hash::Hash;
 use bracket_lib::color::{BLUE, RED, WHITE};
 use bracket_lib::prelude::{BResult, BTerm, BTermBuilder, GameState, main_loop};
 use specs::prelude::*;
+use specs::shred::Fetch;
 use specs_derive::*;
 use crate::Square::{Black, White};
 
@@ -30,7 +31,7 @@ fn main() -> BResult<()> {
         .build();
 
     let ctx = BTermBuilder::simple80x50()
-        .with_fps_cap(1f32)
+        .with_fps_cap(5f32)
         .with_title("Langton Ant - ECS")
         .build()?;
 
@@ -118,7 +119,7 @@ impl<'a> System<'a> for AntStepMove {
         WriteStorage<'a, Square>
     );
 
-    fn run(&mut self, mut data: Self::SystemData) {
+    fn run(&mut self, data: Self::SystemData) {
         let (
             ent,
             mut dir, mut apos,
@@ -127,36 +128,40 @@ impl<'a> System<'a> for AntStepMove {
         let mut new_square = (false,None);
 
         let mut squares = (&apos, &mut sqr).join().map(|d| (*d.0, d.1)).collect::<HashMap<Coord, _>>();
-        println!("Sqrs: {:?}", squares);
 
         (&ent, &mut dir, &mut apos).join()
             .inspect(|p| println!("{:?}",&p))
             .for_each(|(.., d, p)| {
 
-               if let Some(sqr) = squares.get_mut(p) {
-                   match match sqr {
-                       Black => d.turn_right(),
-                       White => d.turn_left(),
-                   } {
-                       Direction::Right => p.0 += 1,
-                       Direction::Down => p.1 += 1,
-                       Direction::Left => p.0 -= 1,
-                       Direction::Up => p.1 -= 1
-                   };
-                   **sqr = match **sqr {
-                       Black => White,
-                       White => Black,
-                   };
-               } else {
-                   new_square = (true, Some(*p));
-               }
-        });
+                let mut def = Square::default();
+
+                let sqr =
+                    if let Some(sqr) = squares.get_mut(p) { sqr }
+                    else {
+                        new_square = (true, Some(*p));
+                        &mut def
+                    };
+
+               match match sqr {
+                   Black => d.turn_right(),
+                   White => d.turn_left(),
+               } {
+                   Direction::Right => p.0 += 1,
+                   Direction::Down => p.1 += 1,
+                   Direction::Left => p.0 -= 1,
+                   Direction::Up => p.1 -= 1
+               };
+               *sqr = match *sqr {
+                   Black => White,
+                   White => Black,
+               };
+            });
 
         match new_square {
             (true, Some(pos)) => {
                 ent.build_entity()
                     .with(pos, &mut apos)
-                    .with(Square::default(), &mut sqr)
+                    .with(Black, &mut sqr)
                     .build();
             },
             _ => {}
