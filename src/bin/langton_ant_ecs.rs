@@ -32,7 +32,7 @@ fn main() -> BResult<()> {
         .build();
 
     let ctx = BTermBuilder::simple80x50()
-        .with_fps_cap(15f32)
+        .with_fps_cap(30f32)
         .with_title("Langton Ant - ECS")
         .build()?;
 
@@ -124,14 +124,14 @@ impl<'a> System<'a> for AntStepMove {
     fn run(&mut self, data: Self::SystemData) {
         let (
             ent,
-            mut dir, mut apos,
+            mut dir, mut xy,
             mut sqr, mut board
         ) = data;
 
         let mut new_square = (false,None);
-        let mut squares = (&apos, &mut sqr).join().map(|d| (*d.0, d.1)).collect::<HashMap<Coord, _>>();
+        let mut squares = (&xy, &mut sqr).join().map(|d| (*d.0, d.1)).collect::<HashMap<Coord, _>>();
 
-        (&ent, &mut dir, &mut apos).join()
+        (&mut dir, &mut xy).join()
             // .inspect(|p| println!("{:?}",&p))
             .for_each(|(.., d, p)| {
 
@@ -153,7 +153,8 @@ impl<'a> System<'a> for AntStepMove {
                    Direction::Left => p.0 -= 1,
                    Direction::Up => p.1 -= 1
                };
-               *sqr = match *sqr {
+
+                *sqr = match *sqr {
                    Black => White,
                    White => Black,
                };
@@ -162,8 +163,8 @@ impl<'a> System<'a> for AntStepMove {
         match new_square {
             (true, Some(pos)) => {
                 ent.build_entity()
-                    .with(pos, &mut apos)
-                    .with(Black, &mut sqr)
+                    .with(pos, &mut xy)
+                    .with(White, &mut sqr)
                     .with(Board, &mut board)
                     .build();
             },
