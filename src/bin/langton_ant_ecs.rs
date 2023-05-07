@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 use bracket_lib::color::{BLUE, RED, WHITE};
 use bracket_lib::prelude::{BResult, BTerm, BTermBuilder, GameState, main_loop};
 use specs::prelude::*;
@@ -123,22 +124,23 @@ impl<'a> System<'a> for AntStepMove {
             mut dir, mut apos,
             mut sqr
         ) = data;
-        let mut new_square = false;
+        let mut new_square = (false,None);
 
-        let sqrs = (&apos,&sqr).join().map(|d| (*d.0,*d.1)).collect::<Vec<(Coord,Square)>>();
+        let squares = (&apos, &sqr).join().map(|d| (*d.0, *d.1)).collect::<HashMap<Coord, Square>>();
+        println!("Sqrs: {:?}", squares);
 
         (&ent, &mut dir, &mut apos).join()
             .inspect(|p| println!("{:?}",&p))
             .for_each(|(.., d, p)| {
 
-                let sqr = if let Some(sqr) =
-                    sqrs.iter()
-                        .find_map(|&d| if d.0.eq(p) { Some(d.1) } else { None }) {
-                    sqr
-                } else {
-                    new_square = true;
-                    Square::default()
-                };
+                let sqr = squares.get(p)
+                    .map(|s| *s)
+                    .or_else(||{
+                        println!("new Square");
+                        new_square = (true,Some(p.clone()));
+                        Some(Square::default())
+                    })
+                    .unwrap();
 
                 match match sqr {
                     Black => d.turn_right(),
@@ -151,11 +153,14 @@ impl<'a> System<'a> for AntStepMove {
                 };
         });
 
-        if new_square {
-            ent.build_entity()
-                .with(Coord(0, 0), &mut apos)
-                .with(Square::default(), &mut sqr)
-                .build();
-        }
+        match new_square {
+            (true, Some(pos)) => {
+                ent.build_entity()
+                    .with(pos, &mut apos)
+                    .with(Square::default(), &mut sqr)
+                    .build();
+            },
+            _ => {}
+        };
     }
 }
