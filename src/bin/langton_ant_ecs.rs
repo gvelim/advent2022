@@ -1,4 +1,5 @@
-use bracket_lib::color::{BLUE, WHITE};
+use std::collections::HashMap;
+use bracket_lib::color::{BLUE, RED, WHITE};
 use bracket_lib::prelude::{BResult, BTerm, BTermBuilder, GameState, main_loop};
 use specs::prelude::*;
 use specs_derive::*;
@@ -12,13 +13,19 @@ fn main() -> BResult<()> {
     sim.world.register::<Coord>();
     sim.world.register::<Square>();
     sim.world.register::<Direction>();
-    sim.world.register::<AntMove>();
+    sim.world.register::<AntStepMove>();
+    sim.world.register::<Ant>();
 
     sim.world.create_entity()
         .with(Coord(0,0))
-        .with(White)
         .with(Direction::Down)
-        .with(AntMove)
+        .with(AntStepMove)
+        .with(Ant)
+        .build();
+
+    sim.world.create_entity()
+        .with(Coord(0,0))
+        .with(Square::default())
         .build();
 
     let ctx = BTermBuilder::simple80x50()
@@ -35,25 +42,46 @@ struct Simulation {
 
 impl GameState for Simulation {
     fn tick(&mut self, ctx: &mut BTerm) {
-
-        let mut ant = AntMove;
-        ant.run_now(&self.world);
+        let mut antmove = AntStepMove;
+        antmove.run_now(&self.world);
         self.world.maintain();
 
         let pos = self.world.read_storage::<Coord>();
         let square = self.world.read_storage::<Square>();
+        let ant = self.world.read_storage::<Ant>();
 
-        (&pos,&square).join()
-            .inspect(|d| println!("Draw: {:?}",d))
-            .for_each(|(p,s)|
-                ctx.set_bg(p.0 + CENTER.0,p.1 + CENTER.1, match s { Black => BLUE, White => WHITE } )
+        (&pos, &square).join()
+            // .inspect(|d| println!("Draw: {:?}",d))
+            .for_each(|(p, s)|
+                ctx.set_bg(p.0 + CENTER.0, p.1 + CENTER.1, match s {
+                    Black => BLUE,
+                    White => WHITE
+                })
             );
+
+        (&ant, &pos).join()
+            .for_each(|(_, p)| ctx.set_bg(p.0 + CENTER.0, p.1 + CENTER.1, RED));
     }
 }
-#[derive(Component,Debug)]
-enum Square { Black, White }
 
-#[derive(Component,Debug)]
+#[derive(Component,Debug,Default)]
+#[storage(NullStorage)]
+struct Ant;
+
+#[derive(Component,Debug,Default)]
+#[storage(NullStorage)]
+struct Board;
+
+
+#[derive(Component,Debug, Copy, Clone)]
+enum Square { Black, White }
+impl Default for Square {
+    fn default() -> Self {
+        Square::Black
+    }
+}
+
+#[derive(Component,Debug, Eq, PartialEq, Hash, Copy, Clone)]
 struct Coord(i32,i32);
 
 #[derive(Component, Copy, Clone, Debug)]
@@ -80,30 +108,43 @@ impl Direction {
 }
 
 #[derive(Component,Debug)]
-struct AntMove;
-impl<'a> System<'a> for AntMove {
-    type SystemData = (ReadStorage<'a, AntMove>, WriteStorage<'a, Direction>, WriteStorage<'a, Coord>, WriteStorage<'a, Square>);
+struct AntStepMove;
 
-    fn run(&mut self, data: Self::SystemData) {
-        let (ant, mut dir, mut pos, mut sqr) = data;
+impl<'a> System<'a> for AntStepMove {
+    type SystemData = (
+        Entities<'a>,
+        WriteStorage<'a, Direction>, WriteStorage<'a, Coord>,
+        WriteStorage<'a, Square>
+    );
 
-        (&ant, &mut dir, &mut sqr, &mut pos).join()
-            .inspect(|d| println!("Run: {:?}",d))
-            .for_each(|(_ant, dir, sqr, pos)| {
-                *dir = match sqr {
-                    Black => dir.turn_right(),
-                    White => dir.turn_left()
+    fn run(&mut self, mut data: Self::SystemData) {
+        let (
+            ent,
+            mut dir, mut apos,
+            sqr
+        ) = data;
+
+        let sqrs = (&apos,&sqr).join().map(|d| (*d.0,*d.1)).collect::<Vec<(Coord,Square)>>();
+
+        (&ent, &mut dir, &mut apos).join()
+            .inspect(|p| println!("{:?}",&p))
+            .for_each(|(.., d, p)| {
+
+                let sqr = if let Some(sqr) =
+                    sqrs.iter()
+                        .find_map(|&d| if d.0.eq(p) { Some(d.1) } else { None }) {
+                    sqr
+                } else { Square::default() };
+
+                match match sqr {
+                    Black => d.turn_right(),
+                    White => d.turn_left(),
+                } {
+                    Direction::Right => p.0 += 1,
+                    Direction::Down => p.1 += 1,
+                    Direction::Left => p.0 -= 1,
+                    Direction::Up => p.1 -= 1
                 };
-                match dir {
-                    Direction::Right => pos.0 += 1,
-                    Direction::Down => pos.1 += 1,
-                    Direction::Left => pos.0 -= 1,
-                    Direction::Up => pos.1 -= 1
-                }
-                *sqr = match sqr {
-                    Black => White,
-                    White => Black
-                };
-            });
+        });
     }
 }
