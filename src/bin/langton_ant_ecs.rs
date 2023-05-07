@@ -126,31 +126,30 @@ impl<'a> System<'a> for AntStepMove {
         ) = data;
         let mut new_square = (false,None);
 
-        let squares = (&apos, &sqr).join().map(|d| (*d.0, *d.1)).collect::<HashMap<Coord, Square>>();
+        let mut squares = (&apos, &mut sqr).join().map(|d| (*d.0, d.1)).collect::<HashMap<Coord, _>>();
         println!("Sqrs: {:?}", squares);
 
         (&ent, &mut dir, &mut apos).join()
             .inspect(|p| println!("{:?}",&p))
             .for_each(|(.., d, p)| {
 
-                let sqr = squares.get(p)
-                    .map(|s| *s)
-                    .or_else(||{
-                        println!("new Square");
-                        new_square = (true,Some(p.clone()));
-                        Some(Square::default())
-                    })
-                    .unwrap();
-
-                match match sqr {
-                    Black => d.turn_right(),
-                    White => d.turn_left(),
-                } {
-                    Direction::Right => p.0 += 1,
-                    Direction::Down => p.1 += 1,
-                    Direction::Left => p.0 -= 1,
-                    Direction::Up => p.1 -= 1
-                };
+               if let Some(sqr) = squares.get_mut(p) {
+                   match match sqr {
+                       Black => d.turn_right(),
+                       White => d.turn_left(),
+                   } {
+                       Direction::Right => p.0 += 1,
+                       Direction::Down => p.1 += 1,
+                       Direction::Left => p.0 -= 1,
+                       Direction::Up => p.1 -= 1
+                   };
+                   **sqr = match **sqr {
+                       Black => White,
+                       White => Black,
+                   };
+               } else {
+                   new_square = (true, Some(*p));
+               }
         });
 
         match new_square {
