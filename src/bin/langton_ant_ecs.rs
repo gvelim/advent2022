@@ -121,8 +121,9 @@ impl<'a> System<'a> for AntStepMove {
         let (
             ent,
             mut dir, mut apos,
-            sqr
+            mut sqr
         ) = data;
+        let mut new_square = false;
 
         let sqrs = (&apos,&sqr).join().map(|d| (*d.0,*d.1)).collect::<Vec<(Coord,Square)>>();
 
@@ -134,7 +135,10 @@ impl<'a> System<'a> for AntStepMove {
                     sqrs.iter()
                         .find_map(|&d| if d.0.eq(p) { Some(d.1) } else { None }) {
                     sqr
-                } else { Square::default() };
+                } else {
+                    new_square = true;
+                    Square::default()
+                };
 
                 match match sqr {
                     Black => d.turn_right(),
@@ -146,5 +150,12 @@ impl<'a> System<'a> for AntStepMove {
                     Direction::Up => p.1 -= 1
                 };
         });
+
+        if new_square {
+            ent.build_entity()
+                .with(Coord(0, 0), &mut apos)
+                .with(Square::default(), &mut sqr)
+                .build();
+        }
     }
 }
