@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
-use bracket_lib::color::{BLUE, RED, WHITE};
-use bracket_lib::prelude::{BResult, BTerm, BTermBuilder, GameState, main_loop};
+use bracket_lib::prelude::*;
 use specs::prelude::*;
 use specs_derive::*;
 use crate::Square::{Black, White};
@@ -18,12 +17,7 @@ fn main() -> BResult<()> {
     sim.world.register::<Ant>();
     sim.world.register::<Board>();
 
-    sim.world.create_entity()
-        .with(Coord(0,0))
-        .with(Direction::Down)
-        .with(AntStepMove)
-        .with(Ant)
-        .build();
+    Ant::insert_ant(Coord(0,0), &mut sim.world);
 
     sim.world.create_entity()
         .with(Coord(0,0))
@@ -45,6 +39,13 @@ struct Simulation {
 
 impl GameState for Simulation {
     fn tick(&mut self, ctx: &mut BTerm) {
+
+        match ctx.key {
+            Some(VirtualKeyCode::A) => Ant::insert_ant(Coord(0,0), &mut self.world),
+            Some(VirtualKeyCode::Q) => ctx.quit(),
+            _ => {}
+        }
+
         let mut antmove = AntStepMove;
         antmove.run_now(&self.world);
         self.world.maintain();
@@ -58,7 +59,7 @@ impl GameState for Simulation {
             // .inspect(|d| println!("Draw: {:?}",d))
             .for_each(|(.., p, s)|
                 ctx.set_bg(p.0 + CENTER.0, p.1 + CENTER.1, match s {
-                    Black => BLUE,
+                    Black => BLACK,
                     White => WHITE
                 })
             );
@@ -71,6 +72,17 @@ impl GameState for Simulation {
 #[derive(Component,Debug,Default)]
 #[storage(NullStorage)]
 struct Ant;
+
+impl Ant {
+    fn insert_ant(pos: Coord, world: &mut World) {
+        world.create_entity()
+            .with( pos)
+            .with( Direction::Down)
+            .with(AntStepMove)
+            .with(Ant)
+            .build();
+    }
+}
 
 #[derive(Component,Debug,Default)]
 #[storage(NullStorage)]
@@ -113,7 +125,6 @@ impl Direction {
 
 #[derive(Component,Debug)]
 struct AntStepMove;
-
 impl<'a> System<'a> for AntStepMove {
     type SystemData = (
         Entities<'a>,
@@ -128,8 +139,11 @@ impl<'a> System<'a> for AntStepMove {
             mut sqr, mut board
         ) = data;
 
-        let mut new_square = (false,None);
-        let mut squares = (&xy, &mut sqr).join().map(|d| (*d.0, d.1)).collect::<HashMap<Coord, _>>();
+        let mut new_squares = Vec::new();
+        let mut squares = (&xy, &mut sqr)
+                .join()
+                .map(|d| (*d.0, d.1))
+                .collect::<HashMap<Coord, _>>();
 
         (&mut dir, &mut xy).join()
             // .inspect(|p| println!("{:?}",&p))
@@ -140,7 +154,7 @@ impl<'a> System<'a> for AntStepMove {
                 let sqr =
                     if let Some(sqr) = squares.get_mut(p) { sqr }
                     else {
-                        new_square = (true, Some(*p));
+                        new_squares.push(*p );
                         &mut default
                     };
 
@@ -160,15 +174,13 @@ impl<'a> System<'a> for AntStepMove {
                };
             });
 
-        match new_square {
-            (true, Some(pos)) => {
-                ent.build_entity()
-                    .with(pos, &mut xy)
-                    .with(White, &mut sqr)
-                    .with(Board, &mut board)
-                    .build();
-            },
-            _ => {}
-        };
+        new_squares.iter()
+            .for_each(|&pos| {
+                    ent.build_entity()
+                        .with(pos, &mut xy)
+                        .with(White, &mut sqr)
+                        .with(Board, &mut board)
+                        .build();
+            });
     }
 }
