@@ -1,7 +1,10 @@
+use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::hash::Hash;
 use bracket_lib::prelude::*;
+use bracket_lib::prelude::VirtualKeyCode::C;
 use specs::prelude::*;
+use specs::shred::Resources;
 use specs_derive::*;
 use crate::Square::{Black, White};
 
@@ -13,19 +16,18 @@ fn main() -> BResult<()> {
     sim.world.register::<Coord>();
     sim.world.register::<Square>();
     sim.world.register::<Direction>();
-    sim.world.register::<AntStepMove>();
     sim.world.register::<Ant>();
-    sim.world.register::<Board>();
+    sim.world.insert::<Area>( Area::default() );
 
     Ant::insert_ant(Coord(0,0), &mut sim.world);
 
     sim.world.create_entity()
         .with(Coord(0,0))
         .with(Square::default())
-        .with(Board)
         .build();
 
     let ctx = BTermBuilder::simple80x50()
+        .with_simple_console(80,50,"terminal8x8.png")
         .with_fps_cap(30f32)
         .with_title("Langton Ant - ECS")
         .build()?;
@@ -53,9 +55,10 @@ impl GameState for Simulation {
         let pos = self.world.read_storage::<Coord>();
         let square = self.world.read_storage::<Square>();
         let ant = self.world.read_storage::<Ant>();
-        let board = self.world.read_storage::<Board>();
+        let area = self.world.read_resource::<Area>();
 
-        (&board, &pos, &square).join()
+        ctx.set_active_console(1);
+        (&pos, &square).join()
             // .inspect(|d| println!("Draw: {:?}",d))
             .for_each(|(.., p, s)|
                 ctx.set_bg(p.0 + CENTER.0, p.1 + CENTER.1, match s {
@@ -66,28 +69,52 @@ impl GameState for Simulation {
 
         (&ant, &pos).join()
             .for_each(|(_, p)| ctx.set_bg(p.0 + CENTER.0, p.1 + CENTER.1, RED));
+
+        ctx.set_active_console(1);
+        ctx.print(1,1, format!("Area: {:?}", (area.width(), area.height())));
+    }
+}
+
+struct Area {
+    tl: Coord,
+    br: Coord
+}
+impl Default for Area {
+    fn default() -> Self {
+        Area{ tl: Coord(-1,-1), br: Coord(1,1) }
+    }
+}
+impl Area {
+    fn new(tl: Coord, br: Coord) -> Area {
+        Area { tl, br }
+    }
+    fn capture(&mut self, p: &Coord) -> &mut Area {
+        self.br.0 = max( self.br.0, p.0);
+        self.br.1 = max( self.br.1, p.1);
+        self.tl.0 = min( self.tl.0, p.0);
+        self.tl.1 = min( self.tl.1, p.1);
+        self
+    }
+    fn width(&self) -> i32 {
+        self.br.0 - self.tl.0
+    }
+    fn height(&self) -> i32 {
+        self.br.1 - self.tl.1
     }
 }
 
 #[derive(Component,Debug,Default)]
 #[storage(NullStorage)]
 struct Ant;
-
 impl Ant {
     fn insert_ant(pos: Coord, world: &mut World) {
         world.create_entity()
             .with( pos)
             .with( Direction::Down)
-            .with(AntStepMove)
             .with(Ant)
             .build();
     }
 }
-
-#[derive(Component,Debug,Default)]
-#[storage(NullStorage)]
-struct Board;
-
 
 #[derive(Component,Debug, Copy, Clone)]
 enum Square { Black, White }
@@ -123,20 +150,19 @@ impl Direction {
     }
 }
 
-#[derive(Component,Debug)]
 struct AntStepMove;
 impl<'a> System<'a> for AntStepMove {
     type SystemData = (
-        Entities<'a>,
+        Entities<'a>, Write<'a, Area>,
         WriteStorage<'a, Direction>, WriteStorage<'a, Coord>,
-        WriteStorage<'a, Square>, WriteStorage<'a, Board>
+        WriteStorage<'a, Square>
     );
 
     fn run(&mut self, data: Self::SystemData) {
         let (
-            ent,
+            ent, mut area,
             mut dir, mut xy,
-            mut sqr, mut board
+            mut sqr
         ) = data;
 
         let mut new_squares = Vec::new();
@@ -146,32 +172,29 @@ impl<'a> System<'a> for AntStepMove {
                 .collect::<HashMap<Coord, _>>();
 
         (&mut dir, &mut xy).join()
-            // .inspect(|p| println!("{:?}",&p))
             .for_each(|(.., d, p)| {
-
                 let mut default = Square::default();
-
                 let sqr =
                     if let Some(sqr) = squares.get_mut(p) { sqr }
                     else {
                         new_squares.push(*p );
                         &mut default
                     };
+                area.capture(p);
+                match match sqr {
+                    Black => d.turn_right(),
+                    White => d.turn_left(),
+                } {
+                    Direction::Right => p.0 += 1,
+                    Direction::Down => p.1 += 1,
+                    Direction::Left => p.0 -= 1,
+                    Direction::Up => p.1 -= 1
+                };
 
-               match match sqr {
-                   Black => d.turn_right(),
-                   White => d.turn_left(),
-               } {
-                   Direction::Right => p.0 += 1,
-                   Direction::Down => p.1 += 1,
-                   Direction::Left => p.0 -= 1,
-                   Direction::Up => p.1 -= 1
-               };
-
-                *sqr = match *sqr {
-                   Black => White,
-                   White => Black,
-               };
+                *sqr = match sqr {
+                    Black => White,
+                    White => Black,
+                };
             });
 
         new_squares.iter()
@@ -179,7 +202,6 @@ impl<'a> System<'a> for AntStepMove {
                     ent.build_entity()
                         .with(pos, &mut xy)
                         .with(White, &mut sqr)
-                        .with(Board, &mut board)
                         .build();
             });
     }
