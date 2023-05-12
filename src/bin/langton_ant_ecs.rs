@@ -6,26 +6,28 @@ use specs::prelude::*;
 use specs_derive::*;
 use crate::Square::{Black, White};
 
-const CENTER: (i32,i32) = (40,25);
+const WIDTH: i32 = 160;
+const HEIGHT: i32 = 100;
+const CENTER: (i32,i32) = (WIDTH>>1,HEIGHT>>1);
 
 fn main() -> BResult<()> {
-    let mut sim = Simulation{ world: World::new() };
+    let mut sim = Simulation{ db: World::new() };
 
-    sim.world.register::<Coord>();
-    sim.world.register::<Square>();
-    sim.world.register::<Direction>();
-    sim.world.register::<Ant>();
-    sim.world.insert::<Area>( Area::default() );
+    sim.db.register::<Coord>();
+    sim.db.register::<Square>();
+    sim.db.register::<Direction>();
+    sim.db.register::<Ant>();
+    sim.db.insert::<Area>( Area::default() );
 
-    sim.world.create_entity()
+    sim.db.create_entity()
         .with(Coord(0,0))
         .with(Square::default())
         .build();
 
-    InsertAnt.run_now(&mut sim.world);
+    InsertAnt.run_now(&mut sim.db);
 
-    let ctx = BTermBuilder::simple80x50()
-        .with_simple_console(80,50,"terminal8x8.png")
+    let ctx = BTermBuilder::simple(WIDTH,HEIGHT)?
+        .with_simple_console_no_bg(WIDTH,HEIGHT,"terminal8x8.png")
         .with_fps_cap(30f32)
         .with_title("Langton Ant - ECS")
         .build()?;
@@ -34,30 +36,30 @@ fn main() -> BResult<()> {
 }
 
 struct Simulation {
-    world: World
+    db: World
 }
 
 impl GameState for Simulation {
     fn tick(&mut self, ctx: &mut BTerm) {
         match ctx.key {
-            Some(VirtualKeyCode::A) => InsertAnt.run_now(&mut self.world),
+            Some(VirtualKeyCode::A) => InsertAnt.run_now(&mut self.db),
             Some(VirtualKeyCode::Q) => ctx.quit(),
             _ => {}
         }
-        AntStepMove.run_now(&self.world);
-        self.world.maintain();
+        AntStepMove.run_now(&self.db);
+        self.db.maintain();
         self.draw(ctx);
     }
 }
 
 impl Simulation {
     fn draw(&self, ctx: &mut BTerm) {
-        let pos = self.world.read_storage::<Coord>();
-        let square = self.world.read_storage::<Square>();
-        let ant = self.world.read_storage::<Ant>();
-        let area = self.world.read_resource::<Area>();
+        let pos = self.db.read_storage::<Coord>();
+        let square = self.db.read_storage::<Square>();
+        let ant = self.db.read_storage::<Ant>();
+        let area = self.db.read_resource::<Area>();
 
-        ctx.set_active_console(1);
+        ctx.set_active_console(0);
         (&pos, &square).join()
             // .inspect(|d| println!("Draw: {:?}",d))
             .for_each(|(.., p, s)|
@@ -104,7 +106,7 @@ impl Area {
 #[storage(NullStorage)]
 struct Ant;
 
-#[derive(Component,Debug, Copy, Clone, Default)]
+#[derive(Component,Debug, Copy, Clone, Default, Eq, PartialEq)]
 enum Square { #[default] Black, White }
 
 #[derive(Component,Debug, Eq, PartialEq, Hash, Copy, Clone)]
@@ -166,7 +168,7 @@ impl<'a> System<'a> for AntStepMove {
         let mut squares = (&xy, &mut sqr)
                 .join()
                 .map(|d| (*d.0, d.1))
-                .collect::<HashMap<Coord, _>>();
+                .collect::<HashMap<_, _>>();
 
         (&mut dir, &mut xy).join()
             .for_each(|(.., d, p)| {
@@ -188,14 +190,11 @@ impl<'a> System<'a> for AntStepMove {
                     Direction::Up => p.1 -= 1
                 };
 
-                *sqr = match sqr {
-                    Black => White,
-                    White => Black,
-                };
+                *sqr  = if *sqr == Square::Black { White } else { Black };
             });
 
-        new_squares.iter()
-            .for_each(|&pos| {
+        new_squares.into_iter()
+            .for_each(|pos| {
                     ent.build_entity()
                         .with(pos, &mut xy)
                         .with(White, &mut sqr)
