@@ -22,6 +22,8 @@ fn main() -> BResult<()> {
         .with(Square::default())
         .build();
 
+    InsertAnt.run_now(&mut sim.world);
+
     let ctx = BTermBuilder::simple80x50()
         .with_simple_console(80,50,"terminal8x8.png")
         .with_fps_cap(30f32)
