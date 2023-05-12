@@ -2,9 +2,7 @@ use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::hash::Hash;
 use bracket_lib::prelude::*;
-use bracket_lib::prelude::VirtualKeyCode::C;
 use specs::prelude::*;
-use specs::shred::Resources;
 use specs_derive::*;
 use crate::Square::{Black, White};
 
@@ -18,8 +16,6 @@ fn main() -> BResult<()> {
     sim.world.register::<Direction>();
     sim.world.register::<Ant>();
     sim.world.insert::<Area>( Area::default() );
-
-    Ant::insert_ant(Coord(0,0), &mut sim.world);
 
     sim.world.create_entity()
         .with(Coord(0,0))
@@ -41,17 +37,19 @@ struct Simulation {
 
 impl GameState for Simulation {
     fn tick(&mut self, ctx: &mut BTerm) {
-
         match ctx.key {
-            Some(VirtualKeyCode::A) => Ant::insert_ant(Coord(0,0), &mut self.world),
+            Some(VirtualKeyCode::A) => InsertAnt.run_now(&mut self.world),
             Some(VirtualKeyCode::Q) => ctx.quit(),
             _ => {}
         }
-
-        let mut antmove = AntStepMove;
-        antmove.run_now(&self.world);
+        AntStepMove.run_now(&self.world);
         self.world.maintain();
+        self.draw(ctx);
+    }
+}
 
+impl Simulation {
+    fn draw(&self, ctx: &mut BTerm) {
         let pos = self.world.read_storage::<Coord>();
         let square = self.world.read_storage::<Square>();
         let ant = self.world.read_storage::<Ant>();
@@ -71,7 +69,7 @@ impl GameState for Simulation {
             .for_each(|(_, p)| ctx.set_bg(p.0 + CENTER.0, p.1 + CENTER.1, RED));
 
         ctx.set_active_console(1);
-        ctx.print(1,1, format!("Area: {:?}", (area.width(), area.height())));
+        ctx.print(1, 1, format!("Area: {:?}", (area.width(), area.height())));
     }
 }
 
@@ -85,9 +83,6 @@ impl Default for Area {
     }
 }
 impl Area {
-    fn new(tl: Coord, br: Coord) -> Area {
-        Area { tl, br }
-    }
     fn capture(&mut self, p: &Coord) -> &mut Area {
         self.br.0 = max( self.br.0, p.0);
         self.br.1 = max( self.br.1, p.1);
@@ -96,33 +91,19 @@ impl Area {
         self
     }
     fn width(&self) -> i32 {
-        self.br.0 - self.tl.0
+        self.br.0 - self.tl.0 + 1
     }
     fn height(&self) -> i32 {
-        self.br.1 - self.tl.1
+        self.br.1 - self.tl.1 + 1
     }
 }
 
 #[derive(Component,Debug,Default)]
 #[storage(NullStorage)]
 struct Ant;
-impl Ant {
-    fn insert_ant(pos: Coord, world: &mut World) {
-        world.create_entity()
-            .with( pos)
-            .with( Direction::Down)
-            .with(Ant)
-            .build();
-    }
-}
 
-#[derive(Component,Debug, Copy, Clone)]
-enum Square { Black, White }
-impl Default for Square {
-    fn default() -> Self {
-        Square::Black
-    }
-}
+#[derive(Component,Debug, Copy, Clone, Default)]
+enum Square { #[default] Black, White }
 
 #[derive(Component,Debug, Eq, PartialEq, Hash, Copy, Clone)]
 struct Coord(i32,i32);
@@ -147,6 +128,20 @@ impl Direction {
             Direction::Up => Direction::Left
         };
         *self
+    }
+}
+
+struct InsertAnt;
+impl<'a> System<'a> for InsertAnt {
+    type SystemData = (Entities<'a>, WriteStorage<'a, Direction>, WriteStorage<'a, Coord>, WriteStorage<'a, Ant>);
+
+    fn run(&mut self, data: Self::SystemData) {
+        let (ent, mut dir, mut pos, mut ant) = data;
+        ent.build_entity()
+            .with::<Direction>( Direction::Down, &mut dir)
+            .with::<Coord>(Coord(0,0), &mut pos)
+            .with::<Ant>(Ant, &mut ant)
+            .build();
     }
 }
 
