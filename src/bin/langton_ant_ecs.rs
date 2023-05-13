@@ -18,6 +18,7 @@ fn main() -> BResult<()> {
     sim.db.register::<Direction>();
     sim.db.register::<Ant>();
     sim.db.insert::<Area>( Area::default() );
+    sim.db.insert::<Vec<Coord>>(Vec::new());
 
     sim.db.create_entity()
         .with(Coord(0,0))
@@ -152,19 +153,18 @@ impl<'a> System<'a> for InsertAnt {
 struct AntStepMove;
 impl<'a> System<'a> for AntStepMove {
     type SystemData = (
-        Entities<'a>, Write<'a, Area>,
+        Entities<'a>, Write<'a, Area>, Write<'a, Vec<Coord>>,
         WriteStorage<'a, Direction>, WriteStorage<'a, Coord>,
         WriteStorage<'a, Square>
     );
 
     fn run(&mut self, data: Self::SystemData) {
         let (
-            ent, mut area,
+            ent, mut area, mut new_squares,
             mut dir, mut xy,
             mut sqr
         ) = data;
 
-        let mut new_squares = Vec::new();
         let mut squares = (&xy, &mut sqr)
                 .join()
                 .map(|d| (*d.0, d.1))
@@ -193,12 +193,11 @@ impl<'a> System<'a> for AntStepMove {
                 *sqr  = if *sqr == Square::Black { White } else { Black };
             });
 
-        new_squares.into_iter()
-            .for_each(|pos| {
-                    ent.build_entity()
-                        .with(pos, &mut xy)
-                        .with(White, &mut sqr)
-                        .build();
-            });
+        while let Some(pos) = new_squares.pop() {
+            ent.build_entity()
+                .with(pos, &mut xy)
+                .with(White, &mut sqr)
+                .build();
+        }
     }
 }
