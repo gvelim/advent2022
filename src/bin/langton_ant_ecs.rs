@@ -176,6 +176,7 @@ impl<'a> System<'a> for InsertAnt {
 struct AntStepMove;
 impl<'a> System<'a> for AntStepMove {
     type SystemData = (
+        Entities<'a>,
         Write<'a, Area>, Write<'a, Vec<Coord>>,
         WriteStorage<'a, Direction>, WriteStorage<'a, Coord>,
         WriteStorage<'a, Square>
@@ -183,6 +184,7 @@ impl<'a> System<'a> for AntStepMove {
 
     fn run(&mut self, data: Self::SystemData) {
         let (
+            ent,
             mut area, mut new_squares,
             mut dir, mut xy,
             mut sqr
@@ -215,67 +217,70 @@ impl<'a> System<'a> for AntStepMove {
                 sqr.flip();
                 area.capture(p);
             });
+
+        // while let Some(pos) = new_squares.pop() {
+        //     ent.build_entity()
+        //         .with(pos, &mut xy)
+        //         .with(White, &mut sqr)
+        //         .build();
+        // }
     }
 }
 
 #[derive(Default)]
 struct AntEvents {
-    dirty: BitSet,
+    modified: BitSet,
     reader_id: Option<ReaderId<ComponentEvent>>
 }
 impl<'a> System<'a> for AntEvents {
     type SystemData = (
-        Entities<'a>, Write<'a, Vec<Coord>>,
+        Entities<'a>,
         WriteStorage<'a, Coord>, WriteStorage<'a, Square>,
         ReadStorage<'a, Direction>
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (ent, mut new_squares, mut xy, mut sqr, dir) = data;
+        let (ent, mut xy, mut sqr, dir) = data;
 
-        while let Some(pos) = new_squares.pop() {
-            ent.build_entity()
-                .with(pos, &mut xy)
-                .with(White, &mut sqr)
-                .build();
-        }
+        self.modified.clear();
 
-        // self.dirty.clear();
-        //
-        // xy.channel()
-        //     .read(self.reader_id.as_mut().unwrap())
-        //     .for_each(|&event|{
-        //         match event {
-        //             ComponentEvent::Modified(id) => {
-        //                 print!("M({:?}), ",(id,xy.get(ent.entity(id)),sqr.get(ent.entity(id))));
-        //                 self.dirty.add(id);
-        //             }
-        //             _ => {}
-        //         }
-        //     });
-        // println!();
-        //
-        // (&self.dirty, &xy, &dir).join()
-        //     .inspect(|p| print!("{:?},",p))
-        //     .for_each(|(_,p,_)|{
-        //         (&mut sqr,&xy).join()
-        //             .find(|d| d.1.eq(p))
-        //             .and_then(|d|{
-        //                 println!("=> matched => {:?}",d);
-        //                 Some(d)
-        //             })
-        //             .or_else(||{
-        //                 println!("No square");
-        //                 None
-        //             });
-        //     });
-        // println!();
+        xy.channel()
+            .read(self.reader_id.as_mut().unwrap())
+            .for_each(|&event|{
+                match event {
+                    ComponentEvent::Modified(id) => {
+                        print!("M({:?}), ",(id,xy.get(ent.entity(id)),sqr.get(ent.entity(id))));
+                        self.modified.add(id);
+                    }
+                    _ => {}
+                }
+            });
+        println!();
+
+        let squares = {
+            (&xy, &self.modified).join()
+                .filter(|(ap, ..)| {
+                    (&xy, &sqr, !&self.modified).join()
+                        .find(|(&sp, ..)| sp.eq(ap)).is_none()
+                })
+                .inspect(|p| print!("{:?},",p))
+                .map(|t| *t.0)
+                .collect::<Vec<_>>()
+        };
+        println!();
+        squares.into_iter()
+            .for_each(|p| {
+                ent.build_entity()
+                    .with(p, &mut xy)
+                    .with(Square::default(), &mut sqr)
+                    .build();
+            });
     }
 
     fn setup(&mut self, world: &mut World) {
         Self::SystemData::setup(world);
         self.reader_id = Some(
-            WriteStorage::<Coord>::fetch(&world).register_reader()
+            world.write_storage::<Coord>().register_reader()
         )
     }
 }
