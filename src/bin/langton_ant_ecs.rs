@@ -11,7 +11,7 @@ const HEIGHT: i32 = 100;
 const CENTER: (i32,i32) = (WIDTH>>1,HEIGHT>>1);
 
 fn main() -> BResult<()> {
-    let mut sim = Simulation{ db: World::new() };
+    let mut sim = Simulation{ db: World::new(), disp: None };
 
     sim.db.register::<Coord>();
     sim.db.register::<Square>();
@@ -20,12 +20,20 @@ fn main() -> BResult<()> {
     sim.db.insert::<Area>( Area::default() );
     sim.db.insert::<Vec<Coord>>(Vec::new());
 
+    sim.disp = Some(
+        DispatcherBuilder::new()
+            .with(AntStepMove, "MoveAnt", &[])
+            .with( AntEvents::default(), "Ant Events", &["MoveAnt"])
+            .build()
+    );
+
+    sim.disp.as_mut().unwrap().setup(&mut sim.db);
+    InsertAnt.run_now(&mut sim.db);
+
     sim.db.create_entity()
         .with(Coord(0,0))
         .with(Square::default())
         .build();
-
-    InsertAnt.run_now(&mut sim.db);
 
     let ctx = BTermBuilder::simple(WIDTH,HEIGHT)?
         .with_simple_console_no_bg(WIDTH,HEIGHT,"terminal8x8.png")
@@ -36,24 +44,26 @@ fn main() -> BResult<()> {
     main_loop(ctx,sim)
 }
 
-struct Simulation {
-    db: World
+struct Simulation<'a,'b> {
+    db: World,
+    disp: Option<Dispatcher<'a,'b>>
 }
 
-impl GameState for Simulation {
+impl GameState for Simulation<'static,'static> {
     fn tick(&mut self, ctx: &mut BTerm) {
         match ctx.key {
             Some(VirtualKeyCode::A) => InsertAnt.run_now(&mut self.db),
             Some(VirtualKeyCode::Q) => ctx.quit(),
             _ => {}
         }
-        AntStepMove.run_now(&self.db);
+        // AntStepMove.run_now(&self.db);
+        self.disp.as_mut().unwrap().run_now(&mut self.db);
         self.db.maintain();
         self.draw(ctx);
     }
 }
 
-impl Simulation {
+impl Simulation<'_,'_> {
     fn draw(&self, ctx: &mut BTerm) {
         let pos = self.db.read_storage::<Coord>();
         let square = self.db.read_storage::<Square>();
@@ -110,8 +120,21 @@ struct Ant;
 #[derive(Component,Debug, Copy, Clone, Default, Eq, PartialEq)]
 enum Square { #[default] Black, White }
 
-#[derive(Component,Debug, Eq, PartialEq, Hash, Copy, Clone)]
+impl Square {
+    fn flip(&mut self) -> Square {
+        *self = match self {
+            Black => White,
+            White => Black
+        };
+        *self
+    }
+
+}
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 struct Coord(i32,i32);
+impl Component for Coord {
+    type Storage = FlaggedStorage<Self, DenseVecStorage<Self>>;
+}
 
 #[derive(Component, Copy, Clone, Debug)]
 enum Direction { Right, Down, Left, Up }
@@ -153,14 +176,14 @@ impl<'a> System<'a> for InsertAnt {
 struct AntStepMove;
 impl<'a> System<'a> for AntStepMove {
     type SystemData = (
-        Entities<'a>, Write<'a, Area>, Write<'a, Vec<Coord>>,
+        Write<'a, Area>, Write<'a, Vec<Coord>>,
         WriteStorage<'a, Direction>, WriteStorage<'a, Coord>,
         WriteStorage<'a, Square>
     );
 
     fn run(&mut self, data: Self::SystemData) {
         let (
-            ent, mut area, mut new_squares,
+            mut area, mut new_squares,
             mut dir, mut xy,
             mut sqr
         ) = data;
@@ -179,7 +202,7 @@ impl<'a> System<'a> for AntStepMove {
                         new_squares.push(*p );
                         &mut default
                     };
-                area.capture(p);
+
                 match match sqr {
                     Black => d.turn_right(),
                     White => d.turn_left(),
@@ -189,9 +212,26 @@ impl<'a> System<'a> for AntStepMove {
                     Direction::Left => p.0 -= 1,
                     Direction::Up => p.1 -= 1
                 };
-
-                *sqr  = if *sqr == Square::Black { White } else { Black };
+                sqr.flip();
+                area.capture(p);
             });
+    }
+}
+
+#[derive(Default)]
+struct AntEvents {
+    dirty: BitSet,
+    reader_id: Option<ReaderId<ComponentEvent>>
+}
+impl<'a> System<'a> for AntEvents {
+    type SystemData = (
+        Entities<'a>, Write<'a, Vec<Coord>>,
+        WriteStorage<'a, Coord>, WriteStorage<'a, Square>,
+        ReadStorage<'a, Direction>
+    );
+
+    fn run(&mut self, data: Self::SystemData) {
+        let (ent, mut new_squares, mut xy, mut sqr, dir) = data;
 
         while let Some(pos) = new_squares.pop() {
             ent.build_entity()
@@ -199,5 +239,43 @@ impl<'a> System<'a> for AntStepMove {
                 .with(White, &mut sqr)
                 .build();
         }
+
+        // self.dirty.clear();
+        //
+        // xy.channel()
+        //     .read(self.reader_id.as_mut().unwrap())
+        //     .for_each(|&event|{
+        //         match event {
+        //             ComponentEvent::Modified(id) => {
+        //                 print!("M({:?}), ",(id,xy.get(ent.entity(id)),sqr.get(ent.entity(id))));
+        //                 self.dirty.add(id);
+        //             }
+        //             _ => {}
+        //         }
+        //     });
+        // println!();
+        //
+        // (&self.dirty, &xy, &dir).join()
+        //     .inspect(|p| print!("{:?},",p))
+        //     .for_each(|(_,p,_)|{
+        //         (&mut sqr,&xy).join()
+        //             .find(|d| d.1.eq(p))
+        //             .and_then(|d|{
+        //                 println!("=> matched => {:?}",d);
+        //                 Some(d)
+        //             })
+        //             .or_else(||{
+        //                 println!("No square");
+        //                 None
+        //             });
+        //     });
+        // println!();
+    }
+
+    fn setup(&mut self, world: &mut World) {
+        Self::SystemData::setup(world);
+        self.reader_id = Some(
+            WriteStorage::<Coord>::fetch(&world).register_reader()
+        )
     }
 }
