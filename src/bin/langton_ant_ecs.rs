@@ -185,7 +185,8 @@ impl<'a> System<'a> for AntStepMove {
     fn run(&mut self, data: Self::SystemData) {
         let (
             ent,
-            mut area, mut new_squares,
+            mut area,
+            mut new_squares, // <- store new Ant positions with no corresponding squares
             mut dir, mut xy,
             mut sqr
         ) = data;
@@ -201,6 +202,8 @@ impl<'a> System<'a> for AntStepMove {
                 let sqr =
                     if let Some(sqr) = squares.get_mut(p) { sqr }
                     else {
+                        // There is not square for this position hence we save the position
+                        // as we cannot create the square within the closure, while "xy" is borrowed mutable
                         new_squares.push(*p );
                         &mut default
                     };
@@ -218,6 +221,7 @@ impl<'a> System<'a> for AntStepMove {
                 area.capture(p);
             });
 
+        // Put missing squares against the new Ant positions
         // while let Some(pos) = new_squares.pop() {
         //     ent.build_entity()
         //         .with(pos, &mut xy)
@@ -244,30 +248,38 @@ impl<'a> System<'a> for AntEvents {
 
         self.modified.clear();
 
+        // find which entities had changed positions
+        // and save them in HiBitSet do we can use in join() later
         xy.channel()
             .read(self.reader_id.as_mut().unwrap())
             .for_each(|&event|{
                 match event {
                     ComponentEvent::Modified(id) => {
-                        print!("M({:?}), ",(id,xy.get(ent.entity(id)),sqr.get(ent.entity(id))));
+                        // print!("M({:?}), ",(id,xy.get(ent.entity(id)),sqr.get(ent.entity(id))));
                         self.modified.add(id);
                     }
                     _ => {}
                 }
             });
-        println!();
+        // println!();
 
-        let squares = {
+        //
+        let squares =
+            // Get all modified positions
             (&xy, &self.modified).join()
                 .filter(|(ap, ..)| {
+                    // get all remaining not modified positions
                     (&xy, &sqr, !&self.modified).join()
+                        // if there a matching Square position for the changed Ant position?
                         .find(|(&sp, ..)| sp.eq(ap)).is_none()
                 })
-                .inspect(|p| print!("{:?},",p))
+                // .inspect(|p| print!("{:?},",p))
+                // If not, then the Ant landed on a non-existing Square
                 .map(|t| *t.0)
-                .collect::<Vec<_>>()
-        };
-        println!();
+                // save the position
+                .collect::<Vec<_>>();
+        // println!();
+        // create the missing squares
         squares.into_iter()
             .for_each(|p| {
                 ent.build_entity()
