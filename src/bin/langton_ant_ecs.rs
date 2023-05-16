@@ -4,7 +4,6 @@ use std::hash::Hash;
 use bracket_lib::prelude::*;
 use specs::prelude::*;
 use specs_derive::*;
-use crate::Square::{Black, White};
 
 const WIDTH: i32 = 160;
 const HEIGHT: i32 = 100;
@@ -75,8 +74,8 @@ impl Simulation<'_,'_> {
             // .inspect(|d| println!("Draw: {:?}",d))
             .for_each(|(.., p, s)|
                 ctx.set_bg(p.0 + CENTER.0, p.1 + CENTER.1, match s {
-                    Black => BLACK,
-                    White => WHITE
+                    Square::BLACK => BLACK,
+                    Square::WHITE => WHITE
                 })
             );
 
@@ -118,13 +117,13 @@ impl Area {
 struct Ant;
 
 #[derive(Component,Debug, Copy, Clone, Default, Eq, PartialEq)]
-enum Square { #[default] Black, White }
+enum Square { #[default] BLACK, WHITE }
 
 impl Square {
     fn flip(&mut self) -> Square {
         *self = match self {
-            Black => White,
-            White => Black
+            Square::BLACK => Square::WHITE,
+            Square::WHITE => Square::BLACK
         };
         *self
     }
@@ -197,7 +196,7 @@ impl<'a> System<'a> for AntStepMove {
                 .collect::<HashMap<_, _>>();
 
         (&mut dir, &mut xy).join()
-            .for_each(|(.., d, p)| {
+            .for_each(|(d, p)| {
                 let mut default = Square::default();
                 let sqr =
                     if let Some(sqr) = squares.get_mut(p) { sqr }
@@ -209,8 +208,8 @@ impl<'a> System<'a> for AntStepMove {
                     };
 
                 match match sqr {
-                    Black => d.turn_right(),
-                    White => d.turn_left(),
+                    Square::BLACK => d.turn_right(),
+                    Square::WHITE => d.turn_left(),
                 } {
                     Direction::Right => p.0 += 1,
                     Direction::Down => p.1 += 1,
@@ -222,12 +221,12 @@ impl<'a> System<'a> for AntStepMove {
             });
 
         // Put missing squares against the new Ant positions
-        // while let Some(pos) = new_squares.pop() {
-        //     ent.build_entity()
-        //         .with(pos, &mut xy)
-        //         .with(White, &mut sqr)
-        //         .build();
-        // }
+        while let Some(pos) = new_squares.pop() {
+            ent.build_entity()
+                .with(pos, &mut xy)
+                .with(Square::WHITE, &mut sqr)
+                .build();
+        }
     }
 }
 
@@ -238,13 +237,11 @@ struct AntEvents {
 }
 impl<'a> System<'a> for AntEvents {
     type SystemData = (
-        Entities<'a>,
-        WriteStorage<'a, Coord>, WriteStorage<'a, Square>,
-        ReadStorage<'a, Direction>
+        WriteStorage<'a, Coord>, WriteStorage<'a, Square>
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (ent, mut xy, mut sqr, dir) = data;
+        let (mut xy, mut sqr) = data;
 
         self.modified.clear();
 
@@ -263,30 +260,30 @@ impl<'a> System<'a> for AntEvents {
             });
         // println!();
 
-        //
-        let squares =
-            // Get all modified positions
-            (&xy, &self.modified).join()
-                .filter(|(ap, ..)| {
-                    // get all remaining not modified positions
-                    (&xy, &sqr, !&self.modified).join()
-                        // if there a matching Square position for the changed Ant position?
-                        .find(|(&sp, ..)| sp.eq(ap)).is_none()
-                })
-                // .inspect(|p| print!("{:?},",p))
-                // If not, then the Ant landed on a non-existing Square
-                .map(|t| *t.0)
-                // save the position
-                .collect::<Vec<_>>();
+        // //
+        // let squares =
+        //     // Get all modified positions
+        //     (&xy, &self.modified).join()
+        //         .filter(|(ap, ..)| {
+        //             // get all remaining not modified positions
+        //             (&xy, &sqr, !&self.modified).join()
+        //                 // if there a matching Square position for the changed Ant position?
+        //                 .find(|(&sp, ..)| sp.eq(ap)).is_none()
+        //         })
+        //         .inspect(|p| print!("{:?},",p))
+        //         // If not, then the Ant landed on a non-existing Square
+        //         .map(|t| *t.0)
+        //         // save the position
+        //         .collect::<Vec<_>>();
         // println!();
-        // create the missing squares
-        squares.into_iter()
-            .for_each(|p| {
-                ent.build_entity()
-                    .with(p, &mut xy)
-                    .with(Square::default(), &mut sqr)
-                    .build();
-            });
+        // // create the missing squares
+        // squares.into_iter()
+        //     .for_each(|p| {
+        //         ent.build_entity()
+        //             .with(p, &mut xy)
+        //             .with(Square::default(), &mut sqr)
+        //             .build();
+        //     });
     }
 
     fn setup(&mut self, world: &mut World) {
