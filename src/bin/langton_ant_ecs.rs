@@ -1,6 +1,7 @@
 use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::ops::Div;
 use bracket_lib::prelude::*;
 use specs::prelude::*;
 use specs_derive::*;
@@ -68,22 +69,29 @@ impl Simulation<'_,'_> {
         let square = self.db.read_storage::<Square>();
         let ant = self.db.read_storage::<Ant>();
         let area = self.db.read_resource::<Area>();
+        let (x_coff, y_coff) = (CENTER.0 - area.br.0 - area.tl.0 - 1, CENTER.1 - area.br.1- area.tl.1 - 1);
+        let (x_scale, y_scale) = ((WIDTH as f32).div((area.width()+3) as f32), (HEIGHT as f32).div((area.height()+3) as f32));
 
         ctx.set_active_console(0);
+        ctx.cls_bg(BLACK);
+        ctx.set_scale(f32::min(x_scale, y_scale), x_coff, y_coff, );
+
         (&pos, &square).join()
             // .inspect(|d| println!("Draw: {:?}",d))
             .for_each(|(.., p, s)|
-                ctx.set_bg(p.0 + CENTER.0, p.1 + CENTER.1, match s {
+                ctx.set_bg(p.0 + x_coff, p.1 + y_coff, match s {
                     Square::BLACK => BLACK,
                     Square::WHITE => WHITE
                 })
             );
 
         (&ant, &pos).join()
-            .for_each(|(_, p)| ctx.set_bg(p.0 + CENTER.0, p.1 + CENTER.1, RED));
+            .for_each(|(_, p)| ctx.set_bg(p.0 + x_coff, p.1 + y_coff, RED));
 
         ctx.set_active_console(1);
-        ctx.print(1, 1, format!("Area: {:?}", (area.width(), area.height())));
+        ctx.print(1, 1, format!("Area: {:?}   ", (area.width(), area.height())));
+        ctx.print(1, 3, format!("Offset: {:?}   ", (x_coff, y_coff) ));
+        ctx.print(1, 5, format!("Scaling: ({:.1},{:.1})  ", x_scale, y_scale ));
     }
 }
 
