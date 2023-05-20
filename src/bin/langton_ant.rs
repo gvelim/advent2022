@@ -10,7 +10,7 @@ fn main() -> BResult<()> {
     let ctx = BTermBuilder::simple(160, 100)?
         .with_simple_console(640,480,"terminal8x8.png")
         .with_sparse_console_no_bg(80, 50, "terminal8x8.png")
-        .with_fps_cap(15f32)
+        .with_fps_cap(30f32)
         .with_vsync(true)
         .with_title("Langton's Ant - Press 'Q':exit, 'A':Ant, 'I':Invert")
         .build()?;

@@ -246,6 +246,7 @@ impl AppLevel for ExerciseTwo {
         ctx.set_active_console(2);
         match ctx.key {
             Some(VirtualKeyCode::Q) => ctx.quit(),
+            Some(VirtualKeyCode::M) => return (Levels::LEVEL2, State::FINISH),
             Some(VirtualKeyCode::S) => {
                 board.empty_sand();
                 grains.clear();
