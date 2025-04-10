@@ -1,0 +1,9 @@
+[book]
+title = "Advent of Code 2022 Solutions"
+authors = ["Advent Solver"]
+description = "Documentation and explanations for Advent of Code 2022 solutions"
+
+[output.html]
+default-theme = "light"
+prefer-dark-theme = true
+git-repository-icon = "fa-github"

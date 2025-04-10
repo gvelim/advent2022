@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 bracket-lib = "0.8"
-specs = "0.18"
+specs = "0.20"
 specs-derive = "0.4"
+proc-macro2 = "1.0.60"
