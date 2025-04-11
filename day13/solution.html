@@ -1,0 +1,498 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Solution Explanation - Advent of Code 2022 Solutions</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Documentation and explanations for Advent of Code 2022 solutions">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Advent of Code 2022 Solutions</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="day-13-solution-explanation"><a class="header" href="#day-13-solution-explanation">Day 13: Solution Explanation</a></h1>
+<h2 id="approach"><a class="header" href="#approach">Approach</a></h2>
+<p>Day 13 involves parsing and comparing nested lists according to specific rules. The solution breaks down into three main components:</p>
+<ol>
+<li><strong>Parsing the nested list structure</strong>: We need to parse strings like <code>[1,[2,3],4]</code> into a structured representation</li>
+<li><strong>Implementing the comparison logic</strong>: We need to define how to compare two list structures following the given rules</li>
+<li><strong>Processing the input data</strong>: We need to handle the pairs of packets for Part 1 and sort all packets for Part 2</li>
+</ol>
+<p>The solution uses a recursive approach for parsing and a structured type system with trait implementations for comparison.</p>
+<h2 id="implementation-details"><a class="header" href="#implementation-details">Implementation Details</a></h2>
+<h3 id="data-structure"><a class="header" href="#data-structure">Data Structure</a></h3>
+<p>First, we define a data structure to represent the packet data, which can be either a number or a list of items:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>enum ListItem {
+    N(u8),       // A number
+    L(Vec&lt;ListItem&gt;)  // A list
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This recursive enum allows representing any nested list structure. We use <code>N</code> for numbers and <code>L</code> for lists.</p>
+<h3 id="parsing"><a class="header" href="#parsing">Parsing</a></h3>
+<p>The solution uses a custom parser implemented with the <code>FromStr</code> trait to convert string input into <code>ListItem</code> structures:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl FromStr for ListItem {
+    type Err = ();
+
+    fn from_str(inp: &amp;str) -&gt; Result&lt;Self, Self::Err&gt; {
+        struct Scanner&lt;I: Iterator&lt;Item=char&gt;&gt; {
+            i: Peekable&lt;I&gt;,
+        }
+        impl&lt;I: Iterator&lt;Item=char&gt;&gt; Scanner&lt;I&gt; {
+            fn new(s: I) -&gt; Self {
+                Scanner { i: s.peekable() }
+            }
+            fn parse_list(&amp;mut self) -&gt; ListItem {
+                let mut s = String::new();
+                let mut v = L(vec![]);
+                loop {
+                    match &amp;self.i.peek() {
+                        Some('[') =&gt; {
+                            self.i.next();
+                            v.insert(self.parse_list());
+                        },
+                        Some(&amp;c@ '0'..='9') =&gt; s.push(c),
+                        &amp;c@
+                        (Some(',') | Some(']')) if !s.is_empty() =&gt; {
+                            v.insert(N(u8::from_str(s.as_str()).expect(""))); 
+                            s.clear();
+                            if ']'.eq(c.unwrap()) {
+                                break v
+                            }
+                        },
+                        Some(',') =&gt; {},
+                        Some(']') =&gt; break v,
+                        None =&gt; break v,
+                        _ =&gt; unreachable!()
+                    }
+                    self.i.next();
+                }
+            }
+        }
+        let mut i = inp.chars().peekable();
+        i.next();
+        Ok(Scanner::new(i).parse_list())
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This parsing logic works by:</p>
+<ol>
+<li>Creating a <code>Scanner</code> that processes characters from a peekable iterator</li>
+<li>Implementing a recursive <code>parse_list</code> method that handles nested lists</li>
+<li>Processing each character based on whether it's an opening bracket, digit, comma, or closing bracket</li>
+<li>Building up the nested <code>ListItem</code> structure as it parses</li>
+</ol>
+<p>The parser handles the specific format of the packets as described in the problem.</p>
+<h3 id="comparison-logic"><a class="header" href="#comparison-logic">Comparison Logic</a></h3>
+<p>The core of the solution is implementing the comparison logic between <code>ListItem</code> values. This is done by implementing the <code>Ord</code> trait:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl Ord for ListItem {
+    fn cmp(&amp;self, other: &amp;Self) -&gt; Ordering {
+        match (self,other) {
+            (L(l), L(r)) =&gt; {
+                let mut liter = l.iter();
+                let mut riter = r.iter();
+
+                loop {
+                    match (liter.next(),riter.next()) {
+                        (Some(l), Some(r)) =&gt;
+                            match l.cmp(r) {
+                                Ordering::Equal =&gt; {},
+                                ord@
+                                (Ordering::Less | Ordering::Greater) =&gt; break ord,
+                            },
+                        (Some(_), None) =&gt; break Ordering::Greater,
+                        (None, Some(_)) =&gt; break Ordering::Less,
+                        (None,None) =&gt; break Ordering::Equal,
+                    };
+                }
+            }
+            (L(_), N(r)) =&gt; {
+                let right = L(vec![N(*r)]);
+                self.cmp(&amp;right)
+            }
+            (N(l), L(_)) =&gt; {
+                let left = L(vec![N(*l)]);
+                left.cmp(other)
+            }
+            (N(l), N(r)) =&gt; l.cmp(r),
+        }
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This implementation follows the rules specified in the problem:</p>
+<ol>
+<li><strong>For two lists</strong>: Compare items one by one until a difference is found or one list runs out of items</li>
+<li><strong>For two integers</strong>: Compare them directly</li>
+<li><strong>For a list and an integer</strong>: Convert the integer to a single-item list and compare</li>
+</ol>
+<p>The <code>PartialOrd</code> trait is also implemented to support comparison operators:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl PartialOrd for ListItem {
+    fn partial_cmp(&amp;self, other: &amp;Self) -&gt; Option&lt;Ordering&gt; {
+        Some(self.cmp(other))
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>And for completeness, the <code>PartialEq</code> and <code>Eq</code> traits are implemented using the comparison logic:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl PartialEq&lt;Self&gt; for ListItem {
+    fn eq(&amp;self, other: &amp;Self) -&gt; bool {
+        self.partial_cmp(other) == Some(Ordering::Equal)
+    }
+}
+
+impl Eq for ListItem {}
+<span class="boring">}</span></code></pre></pre>
+<h3 id="processing-pairs-part-1"><a class="header" href="#processing-pairs-part-1">Processing Pairs (Part 1)</a></h3>
+<p>For Part 1, we need to find the pairs of packets that are in the right order (left &lt; right) and sum their indices:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn packets_in_right_order(input: &amp;str) -&gt; usize {
+    input.split("\n\n")
+        .map(|x| x.lines().collect::&lt;Vec&lt;_&gt;&gt;() )
+        .map(|d|
+            (ListItem::from_str(d[0]), ListItem::from_str(d[1]))
+        )
+        .enumerate()
+        .filter_map(|(i,(l,r))|
+            if l.lt(&amp;r) { Some(i+1) } else { None }
+        )
+        .sum()
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This function:</p>
+<ol>
+<li>Splits the input by double newlines to get pairs of packets</li>
+<li>Parses each packet into a <code>ListItem</code></li>
+<li>Compares each pair using the <code>lt</code> method (less than)</li>
+<li>Keeps track of indices (1-based) for pairs in the right order</li>
+<li>Sums the indices</li>
+</ol>
+<h3 id="sorting-packets-part-2"><a class="header" href="#sorting-packets-part-2">Sorting Packets (Part 2)</a></h3>
+<p>For Part 2, we need to sort all packets, including two divider packets, and find the product of the indices of the divider packets:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn get_decoder_key(input: &amp;str) -&gt; usize {
+    let dividers = vec![
+        L(vec![L(vec![N(2)])]),
+        L(vec![L(vec![N(6)])])
+    ];
+
+    let mut order = input.split("\n\n")
+        .flat_map(|x| x.lines() )
+        .filter_map(|d|
+            ListItem::from_str(d).ok()
+        )
+        .chain(vec![ L(vec![L(vec![N(2)])]), L(vec![L(vec![N(6)])]) ] )
+        .fold(vec![], |mut out, item|{
+            out.push(item);
+            out
+        });
+
+    order.sort();
+    order.iter().for_each(|d| println!("{:?}",d));
+
+    dividers.iter()
+        .map(|d| order.binary_search(d).unwrap() + 1 )
+        .product()
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This function:</p>
+<ol>
+<li>Creates the two divider packets (<code>[[2]]</code> and <code>[[6]]</code>)</li>
+<li>Parses all packets from the input, ignoring blank lines</li>
+<li>Adds the divider packets to the list</li>
+<li>Sorts all packets using the implemented comparison logic</li>
+<li>Finds the indices of the divider packets (1-based)</li>
+<li>Multiplies the indices to get the decoder key</li>
+</ol>
+<h2 id="algorithmic-analysis"><a class="header" href="#algorithmic-analysis">Algorithmic Analysis</a></h2>
+<h3 id="time-complexity"><a class="header" href="#time-complexity">Time Complexity</a></h3>
+<ul>
+<li><strong>Parsing</strong>: O(n) for each packet, where n is the length of the packet string</li>
+<li><strong>Comparison</strong>: O(n) for two packets of total size n</li>
+<li><strong>Part 1</strong>: O(p × n) where p is the number of pairs and n is the average packet size</li>
+<li><strong>Part 2</strong>: O(p × n × log(p)) due to the sorting operation</li>
+</ul>
+<h3 id="space-complexity"><a class="header" href="#space-complexity">Space Complexity</a></h3>
+<ul>
+<li>O(n) to store the parsed packet structures</li>
+<li>O(p) for the list of all packets in Part 2</li>
+</ul>
+<h2 id="alternative-approaches"><a class="header" href="#alternative-approaches">Alternative Approaches</a></h2>
+<h3 id="using-json-parsing"><a class="header" href="#using-json-parsing">Using JSON Parsing</a></h3>
+<p>Since the packet format is essentially JSON, we could use a JSON parsing library:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use serde_json::Value;
+
+fn compare_values(left: &amp;Value, right: &amp;Value) -&gt; Ordering {
+    match (left, right) {
+        (Value::Array(l), Value::Array(r)) =&gt; {
+            // Compare arrays
+            // ...
+        },
+        (Value::Number(l), Value::Number(r)) =&gt; {
+            // Compare numbers
+            // ...
+        },
+        (Value::Array(_), Value::Number(_)) =&gt; {
+            // Convert number to array
+            // ...
+        },
+        (Value::Number(_), Value::Array(_)) =&gt; {
+            // Convert number to array
+            // ...
+        },
+        _ =&gt; unreachable!()
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This approach would rely on an external library but could be more robust for complex inputs.</p>
+<h3 id="recursive-descent-parser"><a class="header" href="#recursive-descent-parser">Recursive Descent Parser</a></h3>
+<p>Another approach would be to use a more structured recursive descent parser:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn parse_packet(s: &amp;str) -&gt; ListItem {
+    let mut chars = s.chars().peekable();
+    parse_list(&amp;mut chars)
+}
+
+fn parse_list(chars: &amp;mut Peekable&lt;Chars&gt;) -&gt; ListItem {
+    // Expect opening bracket
+    assert_eq!(chars.next().unwrap(), '[');
+    
+    let mut list = vec![];
+    
+    // Parse items until closing bracket
+    while chars.peek() != Some(&amp;']') {
+        if chars.peek() == Some(&amp;'[') {
+            list.push(parse_list(chars));
+        } else {
+            list.push(parse_number(chars));
+        }
+        
+        // Skip comma if present
+        if chars.peek() == Some(&amp;',') {
+            chars.next();
+        }
+    }
+    
+    // Skip closing bracket
+    chars.next();
+    
+    L(list)
+}
+
+fn parse_number(chars: &amp;mut Peekable&lt;Chars&gt;) -&gt; ListItem {
+    // Parse digits into a number
+    // ...
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This would be more structured but essentially accomplish the same thing as the current scanner approach.</p>
+<h2 id="conclusion"><a class="header" href="#conclusion">Conclusion</a></h2>
+<p>This solution demonstrates how to parse and compare nested data structures according to complex rules. The use of enums and trait implementations creates a clean, type-safe solution that directly models the problem domain. The comparison logic is implemented recursively to handle the nested nature of the data, and the solution efficiently processes both parts of the problem.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../day13/problem.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../day13/code.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../day13/problem.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../day13/code.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

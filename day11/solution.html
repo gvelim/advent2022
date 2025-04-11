@@ -1,0 +1,488 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Solution Explanation - Advent of Code 2022 Solutions</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Documentation and explanations for Advent of Code 2022 solutions">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Advent of Code 2022 Solutions</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="day-11-solution-explanation"><a class="header" href="#day-11-solution-explanation">Day 11: Solution Explanation</a></h1>
+<h2 id="approach"><a class="header" href="#approach">Approach</a></h2>
+<p>Day 11 involves simulating monkeys playing keep-away with items, applying operations to worry levels, and passing items between monkeys based on tests. The key challenges are:</p>
+<ol>
+<li><strong>Parsing the monkey specifications</strong> from the input text</li>
+<li><strong>Modeling monkeys and their behavior</strong> with appropriate data structures</li>
+<li><strong>Simulating the rounds</strong> of monkey inspections and item throwing</li>
+<li><strong>Managing worry levels</strong> efficiently, especially for Part 2</li>
+</ol>
+<p>The solution uses a combination of custom data types and simulation logic to model the monkey behavior accurately.</p>
+<h2 id="implementation-details"><a class="header" href="#implementation-details">Implementation Details</a></h2>
+<h3 id="data-structures"><a class="header" href="#data-structures">Data Structures</a></h3>
+<p>First, we define a type for representing worry levels and the operation that monkeys can perform:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>type WorryType = u64;
+const WORRY_DEF: WorryType = 0;
+
+#[derive(Debug)]
+enum Operation {
+    Add(WorryType),
+    Mul(WorryType),
+}
+<span class="boring">}</span></code></pre></pre>
+<p><code>WorryType</code> is set to <code>u64</code> to handle the large numbers that can occur during the simulation. The <code>Operation</code> enum represents the two possible operations a monkey can perform: addition or multiplication.</p>
+<p>The <code>Monkey</code> struct represents all the properties of a monkey:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug)]
+struct Monkey {
+    name: usize,
+    items: VecDeque&lt;WorryType&gt;,
+    op: Operation,
+    test: WorryType,
+    send: (usize,usize),
+    inspect: usize
+}
+<span class="boring">}</span></code></pre></pre>
+<p>Each monkey has:</p>
+<ul>
+<li>A name (index)</li>
+<li>A queue of items (worry levels)</li>
+<li>An operation to apply when inspecting items</li>
+<li>A divisibility test value</li>
+<li>Two target monkeys to throw to based on the test result</li>
+<li>A counter for the number of inspections performed</li>
+</ul>
+<h3 id="parsing-input"><a class="header" href="#parsing-input">Parsing Input</a></h3>
+<p>The solution uses Rust's <code>FromStr</code> trait to parse monkey specifications from the input text:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl FromStr for Monkey {
+    type Err = ();
+
+    fn from_str(s: &amp;str) -&gt; Result&lt;Self, Self::Err&gt; {
+        let mut monkey = Cell::new(Monkey::default());
+        s.lines()
+            .map(|line| line.trim().split(':').collect::&lt;Vec&lt;_&gt;&gt;())
+            .map(|parts|{
+                let m = monkey.get_mut();
+                match parts[0] {
+                    "Starting items" =&gt; {
+                        parts[1].split(',')
+                            .map(|n| WorryType::from_str(n.trim()).unwrap() )
+                            .all(|a| { m.items.push_back(a); true });
+                    }
+                    "Operation" =&gt; {
+                        let [op,act] = parts[1]
+                            .split("new = old ")
+                            .last()
+                            .unwrap()
+                            .split(' ')
+                            .collect::&lt;Vec&lt;_&gt;&gt;()[..] else { panic!("Operation: cannot be extracted") };
+                        let a = WorryType::from_str(act);
+                        match (op,a) {
+                            ("*",Ok(n)) =&gt; m.op = Operation::Mul(n),
+                            ("+",Ok(n)) =&gt; m.op = Operation::Add(n),
+                            ("*",_) =&gt; m.op = Operation::Mul(WORRY_DEF),
+                            ("+",_) =&gt; m.op = Operation::Add(WORRY_DEF),
+                            _ =&gt; {}
+                        }
+                    }
+                    "Test" =&gt; {
+                        let s = parts[1].trim().split("divisible by").last().unwrap().trim();
+                        m.test = WorryType::from_str(s).unwrap();
+                    }
+                    "If true" =&gt; {
+                        let s = parts[1].trim().split("throw to monkey").last().unwrap().trim();
+                        m.send.0 = usize::from_str(s).unwrap();
+                    }
+                    "If false" =&gt; {
+                        let s = parts[1].trim().split("throw to monkey").last().unwrap().trim();
+                        m.send.1 = usize::from_str(s).unwrap();
+                    }
+                    name =&gt; {
+                        m.name = usize::from_str(name.split(' ').last().unwrap().trim()).unwrap();
+                    }
+                }
+                true
+            })
+            .all(|run| run);
+
+        Ok(monkey.take())
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This implementation parses each line of the monkey specification and sets the corresponding fields in the <code>Monkey</code> struct.</p>
+<h3 id="monkey-behavior"><a class="header" href="#monkey-behavior">Monkey Behavior</a></h3>
+<p>The <code>Monkey</code> struct implements several methods to model its behavior:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl Monkey {
+    fn parse_text(input: &amp;str) -&gt; Vec&lt;Monkey&gt; {
+        input.split("\n\n")
+            .map(|monkey| Monkey::from_str(monkey).unwrap() )
+            .fold(Vec::new(), |mut out, monkey|{
+                out.push(monkey);
+                out
+            })
+    }
+    
+    fn catch(&amp;mut self, item: WorryType) {
+        self.items.push_back(item)
+    }
+    
+    fn throw(&amp;self, worry: WorryType) -&gt; (usize, WorryType) {
+        if (worry % self.test) == 0 as WorryType {
+            // Current worry level is divisible by the test value
+            (self.send.0, worry)
+        } else {
+            // Current worry level is not divisible by the test value
+            (self.send.1, worry)
+        }
+    }
+    
+    fn observe(&amp;mut self, div: WorryType) -&gt; Option&lt;(usize, WorryType)&gt; {
+        self.inspect += 1;
+        // Monkey inspects an item with a worry level
+        match self.items.pop_front() {
+            Some(mut worry) =&gt; {
+                // Apply the modulo to keep worry levels manageable
+                worry %= div;
+                Some( self.throw(
+                    match self.op {
+                        Operation::Add(WORRY_DEF) =&gt; worry.add(worry),
+                        Operation::Mul(WORRY_DEF) =&gt; worry.mul(worry),
+                        Operation::Add(n) =&gt; worry + n,
+                        Operation::Mul(n) =&gt; worry * n,
+                    }
+                ))
+            }
+            None =&gt; None
+        }
+    }
+    
+    fn observe_all(&amp;mut self, div: WorryType) -&gt; Vec&lt;Option&lt;(usize, WorryType)&gt;&gt; {
+        (0..self.items.len())
+            .fold(vec![], |mut out, _|{
+                out.push( self.observe(div));
+                out
+            })
+    }
+    
+    fn inspections(&amp;self) -&gt; usize {
+        self.inspect
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>These methods handle:</p>
+<ul>
+<li>Parsing all monkeys from the input text</li>
+<li>Catching items thrown by other monkeys</li>
+<li>Throwing items to other monkeys based on the test result</li>
+<li>Observing (inspecting) an item and updating its worry level</li>
+<li>Observing all items in a monkey's possession</li>
+<li>Tracking the number of inspections</li>
+</ul>
+<h3 id="managing-worry-levels"><a class="header" href="#managing-worry-levels">Managing Worry Levels</a></h3>
+<p>In Part 2, the challenge is managing the worry levels since they're no longer divided by 3 and can grow extremely large. The key insight is that we don't need the exact worry levels, only whether they're divisible by the monkeys' test values.</p>
+<p>Using the Chinese Remainder Theorem, we can apply modular arithmetic with the product of all monkeys' test values as the modulus. This keeps the worry levels manageable while preserving divisibility properties:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let div_product: WorryType = monkeys.iter().map(|m| m.test).product();
+<span class="boring">}</span></code></pre></pre>
+<p>This technique is applied in the <code>observe</code> method where we calculate <code>worry %= div</code>.</p>
+<h3 id="simulation-logic"><a class="header" href="#simulation-logic">Simulation Logic</a></h3>
+<p>The main simulation logic runs for the specified number of rounds and tracks the items as they're thrown between monkeys:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Queue for passing items around the monkeys
+let mut queue = vec![VecDeque::&lt;WorryType&gt;::new(); monkeys.len()];
+
+(0..10000).all(|_| {
+    monkeys.iter_mut()
+        .map(|monkey| {
+            // pull from queue anything thrown at him
+            while let Some(item) = queue[monkey.name].pop_front() {
+                monkey.catch(item)
+            };
+
+            // observe and throw back at
+            monkey.observe_all(div_product)
+                .into_iter()
+                .all(|throw|
+                    throw.map(
+                        |(monkey,item)| queue[monkey].push_back(item)
+                    ).is_some()
+                )
+        })
+        .all(|run| run)
+});
+<span class="boring">}</span></code></pre></pre>
+<p>The simulation:</p>
+<ol>
+<li>Iterates through each round</li>
+<li>For each monkey, processes all items in its possession</li>
+<li>Calculates new worry levels and determines target monkeys</li>
+<li>Uses queues to handle the items being thrown between monkeys</li>
+</ol>
+<h3 id="calculating-monkey-business"><a class="header" href="#calculating-monkey-business">Calculating Monkey Business</a></h3>
+<p>Finally, the solution calculates the level of monkey business by multiplying the inspection counts of the two most active monkeys:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>monkeys.sort_by(|a,b| b.inspect.cmp(&amp;a.inspect));
+println!("level of monkey business after 10000 rounds : {:?}",
+         monkeys[0].inspections() * monkeys[1].inspections()
+);
+<span class="boring">}</span></code></pre></pre>
+<h2 id="algorithmic-analysis"><a class="header" href="#algorithmic-analysis">Algorithmic Analysis</a></h2>
+<h3 id="time-complexity"><a class="header" href="#time-complexity">Time Complexity</a></h3>
+<ul>
+<li>Parsing input: O(n) where n is the length of the input text</li>
+<li>Simulation: O(r * m * i) where:
+<ul>
+<li>r is the number of rounds (10,000 for Part 2)</li>
+<li>m is the number of monkeys</li>
+<li>i is the average number of items per monkey</li>
+</ul>
+</li>
+</ul>
+<h3 id="space-complexity"><a class="header" href="#space-complexity">Space Complexity</a></h3>
+<ul>
+<li>O(m * i) for storing the monkeys and their items</li>
+<li>O(m) for the queues used to pass items between monkeys</li>
+</ul>
+<h2 id="key-insights"><a class="header" href="#key-insights">Key Insights</a></h2>
+<h3 id="chinese-remainder-theorem-application"><a class="header" href="#chinese-remainder-theorem-application">Chinese Remainder Theorem Application</a></h3>
+<p>The key insight for Part 2 is using modular arithmetic to manage worry levels. Since we only care about divisibility by each monkey's test value, we can use the product of all test values as a modulus.</p>
+<p>This works because if we have:</p>
+<ul>
+<li>Original worry level: W</li>
+<li>Modulus: M = product of all test divisors</li>
+<li>Remainder: R = W mod M</li>
+</ul>
+<p>Then for any test divisor D that is a factor of M:</p>
+<ul>
+<li>W is divisible by D if and only if R is divisible by D</li>
+</ul>
+<p>This allows us to keep the worry levels manageable while preserving the divisibility properties needed for the monkey's tests.</p>
+<h2 id="alternative-approaches"><a class="header" href="#alternative-approaches">Alternative Approaches</a></h2>
+<h3 id="direct-divisibility-tracking"><a class="header" href="#direct-divisibility-tracking">Direct Divisibility Tracking</a></h3>
+<p>Instead of tracking the actual worry levels, we could track just the remainders when divided by each monkey's test value:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct Item {
+    remainders: HashMap&lt;WorryType, WorryType&gt;, // Map from test value to remainder
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This would allow us to update the remainders directly without ever dealing with the full worry values. However, this is more complex to implement and likely not necessary given the effectiveness of the modulo approach.</p>
+<h3 id="simulation-optimization"><a class="header" href="#simulation-optimization">Simulation Optimization</a></h3>
+<p>For a large number of rounds, we could look for patterns in the monkey's behavior and potentially skip ahead in the simulation. However, this would add complexity and might not be necessary for the given constraints.</p>
+<h2 id="conclusion"><a class="header" href="#conclusion">Conclusion</a></h2>
+<p>This solution demonstrates how to model a complex system with multiple interacting entities. The key insights are:</p>
+<ol>
+<li>Using appropriate data structures to model the monkeys and their behavior</li>
+<li>Applying modular arithmetic to manage worry levels efficiently</li>
+<li>Using queues to handle the passing of items between monkeys</li>
+</ol>
+<p>These techniques allow us to simulate the monkey's behavior for a large number of rounds without running into numerical overflow issues.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../day11/problem.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../day11/code.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../day11/problem.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../day11/code.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

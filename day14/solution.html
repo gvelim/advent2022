@@ -1,0 +1,474 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Solution Explanation - Advent of Code 2022 Solutions</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Documentation and explanations for Advent of Code 2022 solutions">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Advent of Code 2022 Solutions</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="day-14-solution-explanation"><a class="header" href="#day-14-solution-explanation">Day 14: Solution Explanation</a></h1>
+<h2 id="approach"><a class="header" href="#approach">Approach</a></h2>
+<p>Day 14 involves simulating falling sand in a cave system with rock formations. The solution needs to handle several key aspects:</p>
+<ol>
+<li><strong>Parsing the rock formations</strong>: Converting input lines into coordinates for rock paths</li>
+<li><strong>Representing the cave</strong>: Creating a data structure to track materials (rock, sand, air) at each position</li>
+<li><strong>Simulating sand movement</strong>: Implementing the rules for sand falling and coming to rest</li>
+<li><strong>Handling two scenarios</strong>: Tracking sand units for both scenarios (with and without a floor)</li>
+</ol>
+<p>The solution uses a grid-based approach with custom data types for the board, materials, and sand grains.</p>
+<h2 id="implementation-details"><a class="header" href="#implementation-details">Implementation Details</a></h2>
+<h3 id="data-structures"><a class="header" href="#data-structures">Data Structures</a></h3>
+<p>The solution uses several key data structures:</p>
+<h4 id="board"><a class="header" href="#board">Board</a></h4>
+<p>The <code>Board&lt;T&gt;</code> struct represents the cave system:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct Board&lt;T&gt; {
+    width: usize,
+    height: usize,
+    centre_x: usize,
+    offset_x: usize,
+    grid: HashMap&lt;Coord, T&gt;,
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This structure uses a hashmap to store the material at each position, which is more memory-efficient than a full 2D array when most of the cave is air.</p>
+<h4 id="material"><a class="header" href="#material">Material</a></h4>
+<p>An enum represents the different materials in the cave:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>enum Material { Rock, Sand, Air }
+<span class="boring">}</span></code></pre></pre>
+<h4 id="grain"><a class="header" href="#grain">Grain</a></h4>
+<p>The <code>Grain</code> struct represents a single unit of sand:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct Grain {
+    pos: Coord,
+    settled: bool
+}
+<span class="boring">}</span></code></pre></pre>
+<h3 id="parsing-rock-formations"><a class="header" href="#parsing-rock-formations">Parsing Rock Formations</a></h3>
+<p>The input is parsed into a series of rock paths:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn parse_plines(input:&amp;str) -&gt; (Coord, Coord, Vec&lt;Vec&lt;Coord&gt;&gt;) {
+    let mut br = Coord{ x: usize::MIN, y: usize::MIN };
+    let mut tl = Coord{ x: usize::MAX, y: 0 };
+    let plines =
+        input.lines()
+            .map(|line|{
+                line.split(" -&gt; ")
+                    .map(|val| Coord::from_str(val).expect("Ops!"))
+                    .inspect(|p|{
+                        tl.x = std::cmp::min(tl.x, p.x);
+                        br.x = std::cmp::max(br.x, p.x);
+                        br.y = std::cmp::max(br.y, p.y);
+                    })
+                    .collect::&lt;Vec&lt;_&gt;&gt;()
+            })
+            .fold(vec![],|mut out, pline|{
+                out.push(pline);
+                out
+            });
+    (tl, br, plines)
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This function:</p>
+<ol>
+<li>Parses each line of the input into a sequence of coordinates</li>
+<li>Tracks the bounding box of all coordinates (top-left and bottom-right)</li>
+<li>Returns the bounding box and the list of rock paths</li>
+</ol>
+<h3 id="creating-the-cave-board"><a class="header" href="#creating-the-cave-board">Creating the Cave Board</a></h3>
+<p>The board is created based on the bounding box:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn new(tl: Coord, br: Coord) -&gt; Self {
+    let width = br.x - tl.x + 1 + 200;
+    let offset_x = if tl.x &gt; 200 { tl.x - 100 } else { 0 };
+    let centre_x = 500 - offset_x;
+    Board {
+        width,
+        height: br.y + 3,
+        centre_x,
+        offset_x,
+        grid: HashMap::new()
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>The board is sized to include all rock formations plus some extra space for sand to accumulate. The <code>offset_x</code> value is used to make the board more memory-efficient by not starting from x=0 when all the action happens near x=500.</p>
+<h3 id="drawing-rock-formations"><a class="header" href="#drawing-rock-formations">Drawing Rock Formations</a></h3>
+<p>Rock formations are drawn on the board using the <code>Painter</code> helper:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn rock_walls(board: &amp;mut Board&lt;Material&gt;, points: &amp;Vec&lt;Coord&gt;) {
+    points.windows(2)
+        .for_each(|w|{
+            if let [a, b] = w {
+                Painter::wall(board, *a, *b, Material::Rock);
+            }
+        })
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This function takes a sequence of points and draws rock walls between each consecutive pair. The <code>wall</code> function handles drawing both horizontal and vertical lines:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn wall(board: &amp;mut Board&lt;Material&gt;, a: Coord, b: Coord, m: Material) {
+    if a.x == b.x {
+        // vertical wall
+        for y in std::cmp::min(a.y, b.y)..=std::cmp::max(a.y, b.y) {
+            *board.square_mut(Coord { x: a.x, y }).unwrap() = m;
+        }
+    } else if a.y == b.y {
+        // horizontal wall
+        for x in std::cmp::min(a.x, b.x)..=std::cmp::max(a.x, b.x) {
+            *board.square_mut(Coord { x, y: a.y }).unwrap() = m;
+        }
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<h3 id="simulating-sand-movement"><a class="header" href="#simulating-sand-movement">Simulating Sand Movement</a></h3>
+<p>The core of the solution is the sand simulation. A unit of sand falls according to specific rules until it comes to rest or falls into the abyss:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn fall(&amp;mut self, board: &amp;Board&lt;Material&gt;) -&gt; Option&lt;()&gt; {
+    // Try to move down
+    let down = Coord { x: self.pos.x, y: self.pos.y + 1 };
+    if let Some(Material::Air) = board.square(down) {
+        self.pos = down;
+        return Some(());
+    }
+    
+    // Try to move down-left
+    let down_left = Coord { x: self.pos.x - 1, y: self.pos.y + 1 };
+    if let Some(Material::Air) = board.square(down_left) {
+        self.pos = down_left;
+        return Some(());
+    }
+    
+    // Try to move down-right
+    let down_right = Coord { x: self.pos.x + 1, y: self.pos.y + 1 };
+    if let Some(Material::Air) = board.square(down_right) {
+        self.pos = down_right;
+        return Some(());
+    }
+    
+    // Can't move further
+    if board.in_bounds(self.pos) {
+        self.settled = true;
+        Some(())
+    } else {
+        None
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This method tries to move the sand grain in the priority order: down, down-left, down-right. If no move is possible, the grain comes to rest.</p>
+<h3 id="running-the-simulation"><a class="header" href="#running-the-simulation">Running the Simulation</a></h3>
+<p>The <code>run</code> method simulates falling sand until a specified condition is met:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn run&lt;F&gt;(&amp;mut self, start: Coord, check_goal: F) where F: Fn(&amp;Grain) -&gt; bool {
+    loop {
+        let mut grain = Grain::release_grain(start);
+
+        // let the grain fall until it either (a) settles or (b) falls off the board
+        while grain.fall(self).is_some() {};
+
+        // Have we reached an end state?
+        // we use a closure that passes the stopped grain
+        // for checking whether (a) it has fallen in the abyss or (b) reached the starting position
+        if check_goal(&amp;grain) {
+            // Mark settled grain position on the board
+            *self.square_mut(grain.pos).unwrap() = Material::Sand;
+            break
+        }
+
+        // Mark settled grain position on the board
+        *self.square_mut(grain.pos).unwrap() = Material::Sand;
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>The method takes a closure <code>check_goal</code> that determines when to stop the simulation. This allows for different stopping conditions for Part 1 and Part 2.</p>
+<h3 id="adding-a-floor-part-2"><a class="header" href="#adding-a-floor-part-2">Adding a Floor (Part 2)</a></h3>
+<p>For Part 2, a floor is added at the bottom of the cave:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn toggle_floor(&amp;mut self) {
+    let height = self.height-1;
+    let left = Coord { x: self.offset_x, y: height };
+    let right = Coord { x: self.offset_x + self.width - 1, y : height };
+    match self.square(left) {
+        Some(Material::Rock) =&gt; Painter::wall(self, left, right, Material::Air),
+        _ =&gt; Painter::wall(self, left, right, Material::Rock)
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This adds a horizontal rock wall at the bottom of the cave, simulating the floor described in Part 2.</p>
+<h3 id="counting-sand-grains"><a class="header" href="#counting-sand-grains">Counting Sand Grains</a></h3>
+<p>The solution counts the number of sand grains at rest:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn grains_at_rest(&amp;self) -&gt; usize {
+    self.grid.values()
+        .filter(|&amp;s| Material::Sand.eq(s))
+        .count()
+}
+<span class="boring">}</span></code></pre></pre>
+<h3 id="solving-the-problem"><a class="header" href="#solving-the-problem">Solving the Problem</a></h3>
+<p>The solution solves both parts of the problem:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Part 1: Count sand units until one falls into the abyss
+board.run(start, |g| !g.is_settled());
+println!("Scenario 1: Grains Rest: {}", board.grains_at_rest() - 1);
+
+// Reset for Part 2
+board.empty_sand();
+
+// Part 2: Add floor and count until source is blocked
+board.toggle_floor();
+board.run(start, |g| g.pos.eq(&amp;start));
+println!("Scenario 2: Grains Rest: {}", board.grains_at_rest());
+<span class="boring">}</span></code></pre></pre>
+<p>For Part 1, the simulation stops when a grain fails to settle (falls into the abyss).
+For Part 2, the simulation stops when a grain settles at the source position, blocking further sand.</p>
+<h2 id="visualization"><a class="header" href="#visualization">Visualization</a></h2>
+<p>The solution includes a visualization component using the bracket-lib library, allowing you to see the sand falling in real-time.</p>
+<h2 id="algorithm-analysis"><a class="header" href="#algorithm-analysis">Algorithm Analysis</a></h2>
+<h3 id="time-complexity"><a class="header" href="#time-complexity">Time Complexity</a></h3>
+<ul>
+<li><strong>Parsing</strong>: O(n) where n is the number of coordinates in the input</li>
+<li><strong>Sand Simulation</strong>: O(s u00d7 h) where s is the number of sand grains and h is the height of the cave</li>
+<li><strong>Overall</strong>: O(s u00d7 h) since the sand simulation dominates</li>
+</ul>
+<h3 id="space-complexity"><a class="header" href="#space-complexity">Space Complexity</a></h3>
+<ul>
+<li><strong>Board Storage</strong>: O(r + s) where r is the number of rock positions and s is the number of sand positions</li>
+<li><strong>Path Storage</strong>: O(n) for storing the rock paths</li>
+</ul>
+<h2 id="alternative-approaches"><a class="header" href="#alternative-approaches">Alternative Approaches</a></h2>
+<h3 id="array-based-grid"><a class="header" href="#array-based-grid">Array-Based Grid</a></h3>
+<p>Instead of using a hashmap for the grid, we could use a 2D array:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct ArrayBoard {
+    width: usize,
+    height: usize,
+    grid: Vec&lt;Vec&lt;Material&gt;&gt;
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This would have faster access times (O(1) vs. hashmap's average O(1) but worst-case O(n)), but would use more memory for sparse caves.</p>
+<h3 id="scan-lines"><a class="header" href="#scan-lines">Scan Lines</a></h3>
+<p>Another approach would be to use a scan line algorithm to more efficiently determine where sand will come to rest without simulating each step:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn calculate_rest_position(board: &amp;Board, start: Coord) -&gt; Option&lt;Coord&gt; {
+    // Find the first rock/sand below the start position
+    // Check if sand can flow left or right
+    // Return the final rest position
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This could be faster for certain scenarios but would be more complex to implement correctly, especially for Part 2.</p>
+<h2 id="conclusion"><a class="header" href="#conclusion">Conclusion</a></h2>
+<p>This solution demonstrates a comprehensive approach to physical simulation in a grid-based environment. The use of a hashmap for the grid provides memory efficiency, while the simulation logic accurately captures the problem's constraints. The solution is also flexible enough to handle both parts of the problem with minimal changes.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../day14/problem.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../day14/code.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../day14/problem.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../day14/code.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
