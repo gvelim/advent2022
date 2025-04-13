@@ -31,11 +31,11 @@ jobs:
         git config user.name "Deploy from CI"
         git config user.email "3185416+gvelim@users.noreply.github.com"
         cd gh_pages
-        touch .nojekyll
         # Delete the ref to avoid keeping history.
         git update-ref -d refs/heads/gh_pages
         rm -rf *
         mv ../book/* .
+        touch .nojekyll
         git add .
         git commit -m "Deploy $GITHUB_SHA to gh_pages"
         git push --force
