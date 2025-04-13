@@ -4,36 +4,16 @@ Below is the complete code for Day 1's solution. The solution uses a `BinaryHeap
 
 ## Full Solution
 
-```advent2022/src/bin/day1.rs#L1-24
-use std::collections::BinaryHeap;
-use std::str::FromStr;
-
-fn main() {
-
-    let fs = std::fs::read_to_string("./src/bin/day1_input.txt").unwrap_or_else(|e| panic!("{e}"));
-
-    let out = fs.split("\n\n")
-        .map(|e| e.split('\n'))
-        .map(|v|
-            v.filter_map(|e| u64::from_str(e).ok() ).collect::<Vec<u64>>()
-        )
-        .fold(BinaryHeap::new(), |mut out, v|{
-            out.push(v.iter().sum::<u64>());
-            out
-        });
-    println!("Q1: {:?}",out.iter().take(3).collect::<Vec<_>>());
-    println!("Q2: {:?}",out.iter().take(3).sum::<u64>());
-
-}
+```rust,no_run,no_playground
+{{#include ../../../src/bin/day1.rs}}
 ```
 
 ## Code Walkthrough
 
 ### Imports
 
-```advent2022/src/bin/day1.rs#L1-2
-use std::collections::BinaryHeap;
-use std::str::FromStr;
+```rust,no_run,no_playground
+{{#include ../../../src/bin/day1.rs:1:2}}
 ```
 
 The solution imports:
@@ -42,18 +22,8 @@ The solution imports:
 
 ### Input Parsing and Solution
 
-```advent2022/src/bin/day1.rs#L6-15
-    let fs = std::fs::read_to_string("./src/bin/day1_input.txt").unwrap_or_else(|e| panic!("{e}"));
-
-    let out = fs.split("\n\n")
-        .map(|e| e.split('\n'))
-        .map(|v|
-            v.filter_map(|e| u64::from_str(e).ok() ).collect::<Vec<u64>>()
-        )
-        .fold(BinaryHeap::new(), |mut out, v|{
-            out.push(v.iter().sum::<u64>());
-            out
-        });
+```rust,no_run,no_playground
+{{#include ../../../src/bin/day1.rs:6:16}}
 ```
 
 The code:
@@ -66,9 +36,8 @@ The code:
 
 ### Output
 
-```advent2022/src/bin/day1.rs#L16-17
-    println!("Q1: {:?}",out.iter().take(3).collect::<Vec<_>>());
-    println!("Q2: {:?}",out.iter().take(3).sum::<u64>());
+```rust,no_run,no_playground
+{{#include ../../../src/bin/day1.rs:17:18}}
 ```
 
 The code outputs:

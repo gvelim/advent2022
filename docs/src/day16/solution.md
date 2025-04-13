@@ -99,11 +99,11 @@ fn travel_distance(&self, start: &'a str, end: &'a str) -> Option<usize> {
     if let Some(cost) = self.cache.pull((start, end)) {
         return Some(cost);
     }
-    
+
     // Perform BFS to find shortest path
     let mut queue = VecDeque::new();
     let mut state: HashMap<&str, (bool, Option<&str>)> = /* initialize state */;
-    
+
     queue.push_back(start);
     while let Some(valve) = queue.pop_front() {
         if valve.eq(end) {
@@ -111,11 +111,11 @@ fn travel_distance(&self, start: &'a str, end: &'a str) -> Option<usize> {
             // ...
             return Some(path_cost);
         }
-        
+
         // Process neighbors
         // ...
     }
-    
+
     None // No path found
 }
 ```
@@ -135,33 +135,33 @@ fn combinations_elf(&mut self, time_left: usize, start: &'a str, valves: &[&'a s
         }
         return;
     }
-    
+
     // Try each remaining valve
     for (i, &valve) in valves.iter().enumerate() {
         // Calculate cost to move to valve and open it
         let cost = self.net.travel_distance(start, valve).unwrap() + 1;
-        
+
         // Skip if not enough time
         if cost > time_left {
             continue;
         }
-        
+
         // Calculate pressure released
         let new_time_left = time_left - cost;
         let pressure_released = self.net.flow[&valve].pressure * new_time_left;
-        
+
         // Add to current path
         self.path.push(valve);
         self.pressure += pressure_released;
-        
+
         // Recursive call with remaining valves
         let remaining_valves = valves.iter()
             .enumerate()
             .filter_map(|(j, &v)| if j != i { Some(v) } else { None })
             .collect::<Vec<&str>>();
-        
+
         self.combinations_elf(new_time_left, valve, &remaining_valves);
-        
+
         // Backtrack
         self.path.pop();
         self.pressure -= pressure_released;
@@ -184,10 +184,10 @@ fn combinations_elf_elephant(&mut self, time_left: &[usize], start: &[&'a str], 
         }
         return;
     }
-    
+
     // Add current positions to path
     self.path.extend(start);
-    
+
     // Try all combinations of valves for elf and elephant
     for elf in 0..valves.len() {
         for elephant in 0..valves.len() {
@@ -195,47 +195,47 @@ fn combinations_elf_elephant(&mut self, time_left: &[usize], start: &[&'a str], 
             if elf == elephant {
                 continue;
             }
-            
+
             let elf_target = valves[elf];
             let elephant_target = valves[elephant];
-            
+
             // Calculate costs
             let elf_cost = self.net.travel_distance(start[0], elf_target).unwrap();
             let elephant_cost = self.net.travel_distance(start[1], elephant_target).unwrap();
-            
+
             // Skip if not enough time
             if elf_cost > time_left[0] || elephant_cost > time_left[1] {
                 continue;
             }
-            
+
             // Calculate new time and pressure
             let elf_time = time_left[0] - elf_cost;
             let elephant_time = time_left[1] - elephant_cost;
-            
-            let pressure = 
-                self.net.flow[&elf_target].pressure * elf_time + 
+
+            let pressure =
+                self.net.flow[&elf_target].pressure * elf_time +
                 self.net.flow[&elephant_target].pressure * elephant_time;
-            
+
             // Add pressure
             self.pressure += pressure;
-            
+
             // Recursive call with remaining valves
             let remaining_valves = valves.iter()
                 .enumerate()
                 .filter_map(|(i, &v)| if i != elf && i != elephant { Some(v) } else { None })
                 .collect::<Vec<&str>>();
-            
+
             self.combinations_elf_elephant(
                 &[elf_time, elephant_time],
                 &[elf_target, elephant_target],
                 &remaining_valves
             );
-            
+
             // Backtrack
             self.pressure -= pressure;
         }
     }
-    
+
     // Remove current positions from path
     for _ in 0..start.len() {
         self.path.pop();
@@ -287,18 +287,18 @@ fn max_pressure(state: State, memo: &mut HashMap<State, usize>) -> usize {
     if state.1 == 0 {
         return 0;
     }
-    
+
     // Check memo
     if let Some(&result) = memo.get(&state) {
         return result;
     }
-    
+
     // Calculate maximum pressure
     let mut best = 0;
-    
+
     // Try opening the current valve
     // Try moving to each adjacent valve
-    
+
     // Store result
     memo.insert(state, best);
     return best;
@@ -309,7 +309,7 @@ This approach would have a more predictable runtime but requires careful state r
 
 ### Greedy Algorithm
 
-A simpler but less optimal approach would be a greedy algorithm that always chooses the valve with the highest potential pressure release (flow rate × remaining time after reaching it):
+A simpler but **less optimal** approach would be a greedy algorithm that always chooses the valve with the highest potential pressure release (flow rate × remaining time after reaching it):
 
 ```rust
 fn greedy_solution(net: &ValveNet, start: &str, time: usize) -> usize {
@@ -317,7 +317,7 @@ fn greedy_solution(net: &ValveNet, start: &str, time: usize) -> usize {
     let mut time_left = time;
     let mut total_pressure = 0;
     let mut opened = HashSet::new();
-    
+
     while time_left > 0 {
         // Find best valve to open next
         let best_valve = net.valves()
@@ -330,7 +330,7 @@ fn greedy_solution(net: &ValveNet, start: &str, time: usize) -> usize {
                     net.flow[v].pressure * (time_left - cost)
                 }
             });
-        
+
         // No more valves worth opening
         if let Some(valve) = best_valve {
             // Move to valve and open it
@@ -339,12 +339,12 @@ fn greedy_solution(net: &ValveNet, start: &str, time: usize) -> usize {
             break;
         }
     }
-    
+
     total_pressure
 }
 ```
 
-This would run much faster but would likely produce suboptimal results.
+This would run much faster but would likely produce **suboptimal** results.
 
 ## Conclusion
 

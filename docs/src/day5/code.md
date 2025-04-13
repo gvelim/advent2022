@@ -1,116 +1,12 @@
+{{REWRITTEN_CODE}}
 # Day 5: Code
 
 Below is the complete code for Day 5's solution, which handles rearranging stacks of crates.
 
 ## Full Solution
 
-```advent2022/src/bin/day5.rs#L1-78
-use std::collections::HashMap;
-use std::num::ParseIntError;
-use std::str::FromStr;
-
-#[derive(Debug,Copy,Clone)]
-struct Move {
-    count: usize,
-    from: usize,
-    to: usize
-}
-impl FromStr for Move {
-    type Err = ParseIntError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let [_,count,_,from,_,to] = s.split(' ').collect::<Vec<_>>()[..] {
-            Ok(
-                Move {
-                    count: usize::from_str(count)?,
-                    from: usize::from_str(from)?,
-                    to: usize::from_str(to)?,
-                }
-            )
-        } else {
-            unreachable!()
-        }
-    }
-}
-impl Move {
-    fn parse_moves(moves:&str) -> Vec<Move> {
-        moves.lines()
-            .map(|line| Move::from_str(line).unwrap_or_else(|e| panic!("{e}")) )
-            .collect()
-    }
-}
-#[derive(Debug)]
-struct Buckets {
-    buckets: HashMap<usize,Vec<char>>,
-    keys: Vec<usize>
-}
-impl Buckets {
-    fn new(start: &str) -> Buckets {
-        let buckets = start.lines()
-            .rev()
-            .map(|line| line.split("").filter_map(|e| e.chars().next()).collect::<Vec<_>>())
-            .fold(HashMap::new(), |map, e| {
-                e.into_iter()
-                    .enumerate()
-                    .filter(|(_, c)| c.is_alphanumeric())
-                    .fold(map, |mut out, (key, val)| {
-                        out.entry(key)
-                            .or_insert(Vec::default())
-                            .push(val);
-                        out
-                    })
-            });
-        let mut keys = buckets.keys().copied().collect::<Vec<_>>();
-        keys.sort();
-        Buckets {
-            buckets,
-            keys
-        }
-    }
-    fn crate_mover9000(&mut self, m: Move) {
-        let (from, to) = self.get_keys(m);
-        (0..m.count)
-            .for_each(|_|{
-                if let Some(c) = self.buckets.get_mut(&from).expect("").pop() {
-                    self.buckets.get_mut(&to).expect("").push(c)
-                }
-        });
-    }
-    fn crate_mover9001(&mut self, m: Move) {
-        let (from, to) = self.get_keys(m);
-        let v = (0..m.count)
-            .fold(vec![],|mut out,_|{
-                if let Some(c) = self.buckets.get_mut(&from).expect("").pop() { out.push(c) }
-                out
-            });
-        self.buckets.get_mut(&to).expect("").extend(v.iter().rev());
-    }
-    fn scoop_top(&self) -> String {
-        self.keys.iter()
-            .filter_map(|key| self.buckets.get(key))
-            .filter_map(|arr| arr.last().copied() )
-            .fold(String::new(),|mut out,s| { out.push(s); out })
-    }
-    fn get_keys(&self, m:Move) -> (usize,usize) {
-        (self.keys[m.from-1],self.keys[m.to-1])
-    }
-}
-
-fn main() {
-
-    let data = std::fs::read_to_string("src/bin/day5_input.txt").expect("Ops!");
-
-    let [start,moves] = data.split("\n\n").collect::<Vec<_>>()[..] else { panic!("") };
-
-    let mut buckets = Buckets::new(start);
-    let moves = Move::parse_moves(moves);
-
-    moves.iter().for_each(|&m| buckets.crate_mover9000(m) );
-    println!("{:?}",buckets.scoop_top());
-
-    moves.iter().for_each(|&m| buckets.crate_mover9001(m) );
-    println!("{:?}",buckets.scoop_top());
-
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day5.rs}}
 ```
 
 ## Code Walkthrough
@@ -121,23 +17,14 @@ The solution uses two main structures:
 
 1. **Move** - Represents a single move instruction:
 
-```advent2022/src/bin/day5.rs#L5-10
-#[derive(Debug,Copy,Clone)]
-struct Move {
-    count: usize,
-    from: usize,
-    to: usize
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day5.rs:5:10}}
 ```
 
 2. **Buckets** - Represents the stacks of crates:
 
-```advent2022/src/bin/day5.rs#L36-39
-#[derive(Debug)]
-struct Buckets {
-    buckets: HashMap<usize,Vec<char>>,
-    keys: Vec<usize>
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day5.rs:34:38}}
 ```
 
 ### Parsing
@@ -146,64 +33,22 @@ struct Buckets {
 
 The `FromStr` trait implementation for `Move` allows parsing strings like "move 1 from 2 to 1":
 
-```advent2022/src/bin/day5.rs#L11-25
-impl FromStr for Move {
-    type Err = ParseIntError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let [_,count,_,from,_,to] = s.split(' ').collect::<Vec<_>>()[..] {
-            Ok(
-                Move {
-                    count: usize::from_str(count)?,
-                    from: usize::from_str(from)?,
-                    to: usize::from_str(to)?,
-                }
-            )
-        } else {
-            unreachable!()
-        }
-    }
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day5.rs:11:26}}
 ```
 
 The helper method `parse_moves` processes multiple move instructions:
 
-```advent2022/src/bin/day5.rs#L26-32
-impl Move {
-    fn parse_moves(moves:&str) -> Vec<Move> {
-        moves.lines()
-            .map(|line| Move::from_str(line).unwrap_or_else(|e| panic!("{e}")) )
-            .collect()
-    }
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day5.rs:27:32}}
 ```
 
 #### Parsing Initial Crate Configuration
 
 The `new` method of `Buckets` parses the initial crate configuration:
 
-```advent2022/src/bin/day5.rs#L40-63
-fn new(start: &str) -> Buckets {
-    let buckets = start.lines()
-        .rev()                                      // Start from the bottom
-        .map(|line| line.split("").filter_map(|e| e.chars().next()).collect::<Vec<_>>())
-        .fold(HashMap::new(), |map, e| {
-            e.into_iter()
-                .enumerate()
-                .filter(|(_, c)| c.is_alphanumeric())  // Keep only crate letters
-                .fold(map, |mut out, (key, val)| {
-                    out.entry(key)
-                        .or_insert(Vec::default())
-                        .push(val);                 // Add to stack
-                    out
-                })
-        });
-    let mut keys = buckets.keys().copied().collect::<Vec<_>>();
-    keys.sort();                                  // Sort keys for consistent access
-    Buckets {
-        buckets,
-        keys
-    }
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day5.rs:40:61}}
 ```
 
 This method works by:
@@ -216,64 +61,32 @@ This method works by:
 
 #### CrateMover 9000: Moving One at a Time
 
-```advent2022/src/bin/day5.rs#L64-72
-fn crate_mover9000(&mut self, m: Move) {
-    let (from, to) = self.get_keys(m);
-    (0..m.count)
-        .for_each(|_|{
-            if let Some(c) = self.buckets.get_mut(&from).expect("").pop() {
-                self.buckets.get_mut(&to).expect("").push(c)
-            }
-    });
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day5.rs:62:70}}
 ```
 
 This method moves crates one at a time, popping from the source stack and pushing to the destination.
 
 #### CrateMover 9001: Moving Multiple at Once
 
-```advent2022/src/bin/day5.rs#L73-81
-fn crate_mover9001(&mut self, m: Move) {
-    let (from, to) = self.get_keys(m);
-    let v = (0..m.count)
-        .fold(vec![],|mut out,_|{
-            if let Some(c) = self.buckets.get_mut(&from).expect("").pop() { out.push(c) }
-            out
-        });
-    self.buckets.get_mut(&to).expect("").extend(v.iter().rev());
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day5.rs:71:79}}
 ```
 
 This method moves multiple crates at once, preserving their order through a double-reversal process.
 
 ### Getting the Final Result
 
-```advent2022/src/bin/day5.rs#L82-87
-fn scoop_top(&self) -> String {
-    self.keys.iter()
-        .filter_map(|key| self.buckets.get(key))
-        .filter_map(|arr| arr.last().copied() )
-        .fold(String::new(),|mut out,s| { out.push(s); out })
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day5.rs:80:85}}
 ```
 
 This method retrieves the top crate from each stack and combines them into a string.
 
 ### Main Function
 
-```advent2022/src/bin/day5.rs#L92-101
-let data = std::fs::read_to_string("src/bin/day5_input.txt").expect("Ops!");
-
-let [start,moves] = data.split("\n\n").collect::<Vec<_>>()[..] else { panic!("") };
-
-let mut buckets = Buckets::new(start);
-let moves = Move::parse_moves(moves);
-
-moves.iter().for_each(|&m| buckets.crate_mover9000(m) );
-println!("{:?}",buckets.scoop_top());
-
-moves.iter().for_each(|&m| buckets.crate_mover9001(m) );
-println!("{:?}",buckets.scoop_top());
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day5.rs:91:}}
 ```
 
 The main function:

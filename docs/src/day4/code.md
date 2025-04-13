@@ -4,65 +4,16 @@ Below is the complete code for Day 4's solution, which handles range containment
 
 ## Full Solution
 
-```advent2022/src/bin/day4.rs#L1-44
-use std::ops::RangeInclusive;
-use std::str::FromStr;
-
-trait InclusiveRangeExt {
-    fn is_subset(&self, other: &Self) -> bool;
-    fn is_overlapping(&self, other: &Self) -> bool;
-}
-
-impl<T> InclusiveRangeExt for RangeInclusive<T>
-    where T : PartialOrd {
-    fn is_subset(&self, other: &Self) -> bool {
-        self.contains(other.start()) && self.contains(other.end())
-    }
-    fn is_overlapping(&self, other: &Self) -> bool {
-        self.contains(other.start()) || self.contains(other.end())
-    }
-}
-
-fn main() {
-
-    let data = std::fs::read_to_string("src/bin/day4_input.txt").expect("Ops! Cannot read file");
-    let pairs = data.lines()
-        .map(|line|
-            line.split(|c:char| c.is_ascii_punctuation())
-                .map(|c| u32::from_str(c).unwrap_or_else(|e| panic!("{e}")) )
-                .collect::<Vec<_>>()
-        )
-        .map(|pair| {
-            let [a, b, c, d] = pair[..] else { panic!("") };
-            ((a..=b), (c..=d))
-        })
-        .collect::<Vec<_>>();
-
-    let out = pairs.iter()
-        .filter(|(a,b)|
-            a.is_subset(b) || b.is_subset(a)
-        )
-        .count();
-    println!("Component 1 = {out}");
-
-    let out = pairs.iter()
-        .filter(|(a,b)|
-            a.is_overlapping(b) || b.is_overlapping(a)
-        )
-        .count();
-    println!("Component 2 = {out}");
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day4.rs}}
 ```
 
 ## Code Walkthrough
 
 ### Extending Ranges with a Trait
 
-```advent2022/src/bin/day4.rs#L4-7
-trait InclusiveRangeExt {
-    fn is_subset(&self, other: &Self) -> bool;
-    fn is_overlapping(&self, other: &Self) -> bool;
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day4.rs:4:7}}
 ```
 
 The solution defines a trait to extend Rust's `RangeInclusive` type with two new methods for checking containment relationships:
@@ -71,35 +22,16 @@ The solution defines a trait to extend Rust's `RangeInclusive` type with two new
 
 ### Implementing the Trait
 
-```advent2022/src/bin/day4.rs#L9-16
-impl<T> InclusiveRangeExt for RangeInclusive<T>
-    where T : PartialOrd {
-    fn is_subset(&self, other: &Self) -> bool {
-        self.contains(other.start()) && self.contains(other.end())
-    }
-    fn is_overlapping(&self, other: &Self) -> bool {
-        self.contains(other.start()) || self.contains(other.end())
-    }
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day4.rs:9:17}}
 ```
 
 The trait is implemented generically for any `RangeInclusive<T>` where `T` supports partial ordering. This allows the solution to work with ranges of any comparable type, not just integers.
 
 ### Parsing Input
 
-```advent2022/src/bin/day4.rs#L20-31
-let data = std::fs::read_to_string("src/bin/day4_input.txt").expect("Ops! Cannot read file");
-let pairs = data.lines()
-    .map(|line|
-        line.split(|c:char| c.is_ascii_punctuation())
-            .map(|c| u32::from_str(c).unwrap_or_else(|e| panic!("{e}")) )
-            .collect::<Vec<_>>()
-    )
-    .map(|pair| {
-        let [a, b, c, d] = pair[..] else { panic!("") };
-        ((a..=b), (c..=d))
-    })
-    .collect::<Vec<_>>();
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day4.rs:21:32}}
 ```
 
 The parsing involves several steps:
@@ -110,24 +42,16 @@ The parsing involves several steps:
 
 ### Part 1: Checking Subset Relationships
 
-```advent2022/src/bin/day4.rs#L33-37
-let out = pairs.iter()
-    .filter(|(a,b)|
-        a.is_subset(b) || b.is_subset(a)
-    )
-    .count();
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day4.rs:34:38}}
 ```
 
 This part counts pairs where one range fully contains the other by applying the `is_subset` method and checking in both directions.
 
 ### Part 2: Checking Overlap Relationships
 
-```advent2022/src/bin/day4.rs#L39-43
-let out = pairs.iter()
-    .filter(|(a,b)|
-        a.is_overlapping(b) || b.is_overlapping(a)
-    )
-    .count();
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day4.rs:41:45}}
 ```
 
 This part counts pairs where the ranges overlap at all by applying the `is_overlapping` method and checking in both directions.

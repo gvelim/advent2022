@@ -1,61 +1,20 @@
+{{REWRITTEN_CODE}}
 # Day 6: Code
 
 Below is the complete code for Day 6's solution, which finds marker patterns in a datastream.
 
 ## Full Solution
 
-```advent2022/src/bin/day6.rs#L1-28
-use std::fmt::Debug;
-
-trait Duplicate {
-    fn has_duplicates(&self) -> bool;
-}
-impl<T> Duplicate for [T] where T: Debug + Copy + PartialEq + Ord {
-    fn has_duplicates(&self) -> bool {
-        let mut tmp = self.to_vec();
-        tmp.sort();
-        tmp.windows(2).any(|a| a[0]==a[1])
-    }
-}
-
-trait Signaling {
-    fn marker_position(&self, len:usize) -> usize;
-}
-impl<T> Signaling for [T] where T : Debug + Copy + PartialEq + Ord {
-    fn marker_position(&self, len: usize) -> usize {
-        self.windows(len)
-            .enumerate()
-            .skip_while(|&(_,stm)| stm.has_duplicates() )
-            .next()
-            .map(|(i,_)| i + len)
-            .unwrap_or_else(|| panic!("marker_position(): Ops!"))
-    }
-}
-
-fn main() {
-    let data = std::fs::read_to_string("src/bin/day6_input.txt").expect("");
-
-    let out = data.bytes().collect::<Vec<_>>();
-    println!("Marker Length @4 = {}", out.marker_position(4));
-    println!("Marker Length @14 = {}", out.marker_position(14));
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day6.rs}}
 ```
 
 ## Code Walkthrough
 
 ### Duplicate Detection Trait
 
-```advent2022/src/bin/day6.rs#L3-11
-trait Duplicate {
-    fn has_duplicates(&self) -> bool;
-}
-impl<T> Duplicate for [T] where T: Debug + Copy + PartialEq + Ord {
-    fn has_duplicates(&self) -> bool {
-        let mut tmp = self.to_vec();
-        tmp.sort();
-        tmp.windows(2).any(|a| a[0]==a[1])
-    }
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day6.rs:3:12}}
 ```
 
 This trait provides a method to check if a slice contains duplicate elements:
@@ -67,20 +26,8 @@ This trait provides a method to check if a slice contains duplicate elements:
 
 ### Marker Detection Trait
 
-```advent2022/src/bin/day6.rs#L13-23
-trait Signaling {
-    fn marker_position(&self, len:usize) -> usize;
-}
-impl<T> Signaling for [T] where T : Debug + Copy + PartialEq + Ord {
-    fn marker_position(&self, len: usize) -> usize {
-        self.windows(len)
-            .enumerate()
-            .skip_while(|&(_,stm)| stm.has_duplicates() )
-            .next()
-            .map(|(i,_)| i + len)
-            .unwrap_or_else(|| panic!("marker_position(): Ops!"))
-    }
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day6.rs:14:26}}
 ```
 
 This trait provides a method to find the position of the first marker of a specified length:
@@ -94,14 +41,8 @@ This trait provides a method to find the position of the first marker of a speci
 
 ### Main Function
 
-```advent2022/src/bin/day6.rs#L25-28
-fn main() {
-    let data = std::fs::read_to_string("src/bin/day6_input.txt").expect("");
-
-    let out = data.bytes().collect::<Vec<_>>();
-    println!("Marker Length @4 = {}", out.marker_position(4));
-    println!("Marker Length @14 = {}", out.marker_position(14));
-}
+```rust,no_run,noplayground
+{{#include ../../../src/bin/day6.rs:28:}}
 ```
 
 The main function:
