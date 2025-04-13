@@ -1,0 +1,525 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Code - Advent of Code 2022 Solutions</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Documentation and explanations for Advent of Code 2022 solutions">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Advent of Code 2022 Solutions</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="day-15-code"><a class="header" href="#day-15-code">Day 15: Code</a></h1>
+<p>Below is the complete code for Day 15's solution, which analyzes sensor coverage to find positions where beacons cannot be present.</p>
+<h2 id="full-solution"><a class="header" href="#full-solution">Full Solution</a></h2>
+<pre><code class="language-rust no_run noplayground">use std::collections::HashSet;
+use std::fmt::{Debug, Formatter};
+use std::ops::RangeInclusive;
+use std::str::FromStr;
+
+// const INPUT : &amp;str = "Sensor at x=2, y=18: closest beacon is at x=-2, y=15
+// Sensor at x=9, y=16: closest beacon is at x=10, y=16
+// Sensor at x=13, y=2: closest beacon is at x=15, y=3
+// Sensor at x=12, y=14: closest beacon is at x=10, y=16
+// Sensor at x=10, y=20: closest beacon is at x=10, y=16
+// Sensor at x=14, y=17: closest beacon is at x=10, y=16
+// Sensor at x=8, y=7: closest beacon is at x=2, y=10
+// Sensor at x=2, y=0: closest beacon is at x=2, y=10
+// Sensor at x=0, y=11: closest beacon is at x=2, y=10
+// Sensor at x=20, y=14: closest beacon is at x=25, y=17
+// Sensor at x=17, y=20: closest beacon is at x=21, y=22
+// Sensor at x=16, y=7: closest beacon is at x=15, y=3
+// Sensor at x=14, y=3: closest beacon is at x=15, y=3
+// Sensor at x=20, y=1: closest beacon is at x=15, y=3";
+
+fn main() {
+    let input = std::fs::read_to_string("src/bin/day15_input.txt").expect("Ops!");
+
+    let area = Area::deploy_sensors(input.as_str());
+
+    // Component 1
+    let res = area.sensor_coverage_at(2000000);
+    println!("Signal Coverage @2000000 = {:?}",res);
+    let beacons = area.beacons_at(2000000);
+    println!("Beacons = {:?}",beacons);
+
+    let positions = res.into_iter()
+        .map(|r| r.count())
+        .sum::&lt;usize&gt;();
+    println!("{}-{}={} (4793062)", positions,beacons.len(),positions-beacons.len());
+
+    // Component 2
+    let (line, v) = (0..=4000000)
+        .map(|line| (line,area.sensor_coverage_at(line)))
+        .filter(|(_,v)| v.len() &gt; 1 )
+        .filter(|(_,v)| v[1].start() - v[0].end() &gt; 1 )
+        .next().unwrap();
+
+    let total = (v[0].end() + 1) * 4000000 + line;
+    println!("Signal Coverage @{line} = {:?} \nFreq of distress beacon: {total}", v);
+}
+
+struct Area {
+    sensors: Vec&lt;Sensor&gt;
+}
+impl Area {
+    fn deploy_sensors(sensors:&amp;str ) -&gt; Area {
+        Area {
+            sensors: sensors.lines()
+                .map(|line|
+                    line.split(&amp;[' ','=',',',':'])
+                        .filter(|item| !item.trim().is_empty() )
+                        .filter(|item| item.chars().all(|d| d.is_numeric() || d == '-'))
+                        .filter_map(|n| isize::from_str(n).ok())
+                        .collect::&lt;Vec&lt;_&gt;&gt;()
+                )
+                .map(|comb|
+                    Sensor {
+                        pos: (comb[0],comb[1]).into(),
+                        beacon: (comb[2],comb[3]).into(),
+                        dist: comb[0].abs_diff(comb[2]) + comb[1].abs_diff(comb[3])
+                    }
+                )
+                .collect::&lt;Vec&lt;_&gt;&gt;()
+        }
+    }
+    fn beacons_at(&amp;self, line:isize) -&gt; HashSet&lt;Coord&gt; {
+        self.sensors.iter().filter_map(|s| if s.beacon.y == line { Some(s.beacon)} else {None}).collect::&lt;HashSet&lt;_&gt;&gt;()
+    }
+    fn sensor_coverage_at(&amp;self, line: isize) -&gt; Vec&lt;RangeInclusive&lt;isize&gt;&gt; {
+
+        let mut result = vec![];
+
+        let mut ranges = self.sensors.iter()
+                .filter_map(|sensor| sensor.coverage_at(line))
+                .collect::&lt;Vec&lt;_&gt;&gt;();
+
+        ranges.sort_by_key(|a| *a.start());
+
+        if let Some(last) = ranges.into_iter()
+            .reduce(|a, b|
+                if a.end() &gt;= &amp;(b.start()-1) {
+                    if a.end() &lt; b.end() {
+                        *a.start()..=*b.end()
+                    } else { a }
+                } else {
+                    // We got a range gap here hence we must save range A
+                    // while we pass on Range B to the next iteration
+                    result.push(a);
+                    b
+                }
+            ) {
+            result.push(last);
+        }
+        result
+    }
+}
+
+#[derive(Eq, PartialEq, Hash)]
+struct Sensor {
+    pos: Coord,
+    beacon: Coord,
+    dist: usize
+}
+impl Sensor {
+    fn coverage_at(&amp;self, d: isize) -&gt; Option&lt;RangeInclusive&lt;isize&gt;&gt; {
+        let Coord{x,y} = self.pos;
+        let diff = y.abs_diff(d);
+        if diff &lt;= self.dist {
+            Some(RangeInclusive::new(
+                x.saturating_sub_unsigned(self.dist - diff),
+                x.saturating_add_unsigned(self.dist - diff))
+            )
+        } else {
+            None
+        }
+    }
+}
+
+impl Debug for Sensor {
+    fn fmt(&amp;self, f: &amp;mut Formatter&lt;'_&gt;) -&gt; std::fmt::Result {
+        write!(f, "S{:?} {:?} B{:?}",self.pos, self.dist, self.beacon)
+    }
+}
+
+/// Generics
+///
+
+#[derive(Ord, PartialOrd,Copy, Clone, Eq, PartialEq,Hash)]
+struct Coord {
+    x: isize,
+    y: isize
+}
+impl Debug for Coord {
+    fn fmt(&amp;self, f: &amp;mut Formatter&lt;'_&gt;) -&gt; std::fmt::Result {
+        write!(f, "({},{})",self.x,self.y)
+    }
+}
+impl From&lt;(isize,isize)&gt; for Coord {
+    fn from(p: (isize, isize)) -&gt; Self {
+        Coord { x:p.0, y:p.1 }
+    }
+}</code></pre>
+<h2 id="code-walkthrough"><a class="header" href="#code-walkthrough">Code Walkthrough</a></h2>
+<h3 id="core-data-structures"><a class="header" href="#core-data-structures">Core Data Structures</a></h3>
+<pre><code class="language-rust no_run noplayground">#[derive(Ord, PartialOrd,Copy, Clone, Eq, PartialEq,Hash)]
+struct Coord {
+    x: isize,
+    y: isize
+}
+impl Debug for Coord {
+    fn fmt(&amp;self, f: &amp;mut Formatter&lt;'_&gt;) -&gt; std::fmt::Result {
+        write!(f, "({},{})",self.x,self.y)
+    }
+}</code></pre>
+<p>The <code>Coord</code> struct represents a 2D coordinate with x and y values. It implements several traits to make it comparable, hashable, and printable.</p>
+<pre><code class="language-rust no_run noplayground">#[derive(Eq, PartialEq, Hash)]
+struct Sensor {
+    pos: Coord,
+    beacon: Coord,
+    dist: usize
+}</code></pre>
+<p>The <code>Sensor</code> struct contains information about a sensor's position, its closest beacon's position, and the Manhattan distance between them.</p>
+<pre><code class="language-rust no_run noplayground">struct Area {
+    sensors: Vec&lt;Sensor&gt;
+}</code></pre>
+<p>The <code>Area</code> struct is a container for all sensors in the input.</p>
+<h3 id="sensor-coverage-calculation"><a class="header" href="#sensor-coverage-calculation">Sensor Coverage Calculation</a></h3>
+<pre><code class="language-rust no_run noplayground">impl Sensor {
+    fn coverage_at(&amp;self, d: isize) -&gt; Option&lt;RangeInclusive&lt;isize&gt;&gt; {
+        let Coord{x,y} = self.pos;
+        let diff = y.abs_diff(d);
+        if diff &lt;= self.dist {
+            Some(RangeInclusive::new(
+                x.saturating_sub_unsigned(self.dist - diff),
+                x.saturating_add_unsigned(self.dist - diff))
+            )
+        } else {
+            None
+        }
+    }
+}</code></pre>
+<p>This method calculates the x-coordinate range that a sensor can cover at a specific y-coordinate. It:</p>
+<ol>
+<li>Calculates the vertical distance to the target line</li>
+<li>If this distance is within the sensor's range, calculates the horizontal range</li>
+<li>Returns the range, or <code>None</code> if the line is out of range</li>
+</ol>
+<h3 id="analyzing-sensor-coverage-on-a-row"><a class="header" href="#analyzing-sensor-coverage-on-a-row">Analyzing Sensor Coverage on a Row</a></h3>
+<pre><code class="language-rust no_run noplayground">    fn sensor_coverage_at(&amp;self, line: isize) -&gt; Vec&lt;RangeInclusive&lt;isize&gt;&gt; {
+
+        let mut result = vec![];
+
+        let mut ranges = self.sensors.iter()
+                .filter_map(|sensor| sensor.coverage_at(line))
+                .collect::&lt;Vec&lt;_&gt;&gt;();
+
+        ranges.sort_by_key(|a| *a.start());
+
+        if let Some(last) = ranges.into_iter()
+            .reduce(|a, b|
+                if a.end() &gt;= &amp;(b.start()-1) {
+                    if a.end() &lt; b.end() {
+                        *a.start()..=*b.end()
+                    } else { a }
+                } else {
+                    // We got a range gap here hence we must save range A
+                    // while we pass on Range B to the next iteration
+                    result.push(a);
+                    b
+                }
+            ) {
+            result.push(last);
+        }
+        result
+    }</code></pre>
+<p>This method aggregates coverage from all sensors on a specific row:</p>
+<ol>
+<li>Collects ranges from all sensors that cover the specified row</li>
+<li>Sorts the ranges by their start position</li>
+<li>Merges overlapping ranges using a <code>reduce</code> operation</li>
+<li>Returns a vector of non-overlapping ranges representing total coverage</li>
+</ol>
+<h3 id="finding-beacons-on-a-row"><a class="header" href="#finding-beacons-on-a-row">Finding Beacons on a Row</a></h3>
+<pre><code class="language-rust no_run noplayground">    fn beacons_at(&amp;self, line:isize) -&gt; HashSet&lt;Coord&gt; {
+        self.sensors.iter().filter_map(|s| if s.beacon.y == line { Some(s.beacon)} else {None}).collect::&lt;HashSet&lt;_&gt;&gt;()
+    }</code></pre>
+<p>This method identifies all beacons located on a specific row.</p>
+<h3 id="parsing-input"><a class="header" href="#parsing-input">Parsing Input</a></h3>
+<pre><code class="language-rust no_run noplayground">    fn deploy_sensors(sensors:&amp;str ) -&gt; Area {
+        Area {
+            sensors: sensors.lines()
+                .map(|line|
+                    line.split(&amp;[' ','=',',',':'])
+                        .filter(|item| !item.trim().is_empty() )
+                        .filter(|item| item.chars().all(|d| d.is_numeric() || d == '-'))
+                        .filter_map(|n| isize::from_str(n).ok())
+                        .collect::&lt;Vec&lt;_&gt;&gt;()
+                )
+                .map(|comb|
+                    Sensor {
+                        pos: (comb[0],comb[1]).into(),
+                        beacon: (comb[2],comb[3]).into(),
+                        dist: comb[0].abs_diff(comb[2]) + comb[1].abs_diff(comb[3])
+                    }
+                )
+                .collect::&lt;Vec&lt;_&gt;&gt;()
+        }
+    }</code></pre>
+<p>This method parses the input text into <code>Sensor</code> objects by:</p>
+<ol>
+<li>Splitting each line into parts</li>
+<li>Filtering out non-numeric parts</li>
+<li>Converting numeric strings to integers</li>
+<li>Constructing sensors with their positions, beacon positions, and distances</li>
+</ol>
+<h3 id="main-function"><a class="header" href="#main-function">Main Function</a></h3>
+<pre><code class="language-rust no_run noplayground">fn main() {
+    let input = std::fs::read_to_string("src/bin/day15_input.txt").expect("Ops!");
+
+    let area = Area::deploy_sensors(input.as_str());
+
+    // Component 1
+    let res = area.sensor_coverage_at(2000000);
+    println!("Signal Coverage @2000000 = {:?}",res);
+    let beacons = area.beacons_at(2000000);
+    println!("Beacons = {:?}",beacons);
+
+    let positions = res.into_iter()
+        .map(|r| r.count())
+        .sum::&lt;usize&gt;();
+    println!("{}-{}={} (4793062)", positions,beacons.len(),positions-beacons.len());
+
+    // Component 2
+    let (line, v) = (0..=4000000)
+        .map(|line| (line,area.sensor_coverage_at(line)))
+        .filter(|(_,v)| v.len() &gt; 1 )
+        .filter(|(_,v)| v[1].start() - v[0].end() &gt; 1 )
+        .next().unwrap();
+
+    let total = (v[0].end() + 1) * 4000000 + line;
+    println!("Signal Coverage @{line} = {:?} \nFreq of distress beacon: {total}", v);
+}</code></pre>
+<p>The main function:</p>
+<ol>
+<li>Reads and parses the input file</li>
+<li>For Part 1:
+<ul>
+<li>Gets the sensor coverage on row 2000000</li>
+<li>Identifies beacons already on that row</li>
+<li>Calculates the number of positions that cannot contain a beacon</li>
+</ul>
+</li>
+<li>For Part 2:
+<ul>
+<li>Checks each row in the search area (0 to 4000000)</li>
+<li>Finds a row where the coverage is split with a gap of exactly one position</li>
+<li>Calculates the tuning frequency of the distress beacon</li>
+</ul>
+</li>
+</ol>
+<p>The key insight for Part 2 is that the distress beacon must be in a position that is just outside the range of multiple sensors, which appears as a gap in the coverage.</p>
+<h2 id="implementation-notes"><a class="header" href="#implementation-notes">Implementation Notes</a></h2>
+<ul>
+<li><strong>Range Representation</strong>: The solution uses <code>RangeInclusive&lt;isize&gt;</code> to represent coverage ranges efficiently</li>
+<li><strong>Merge Algorithm</strong>: Overlapping ranges are merged, significantly reducing the number of ranges needed to represent coverage</li>
+<li><strong>Efficient Searching</strong>: The solution for Part 2 efficiently finds the gap by examining rows with split coverage rather than checking every position</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../day15/solution.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../day16/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../day15/solution.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../day16/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

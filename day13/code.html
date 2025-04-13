@@ -1,0 +1,614 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Code - Advent of Code 2022 Solutions</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Documentation and explanations for Advent of Code 2022 solutions">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Advent of Code 2022 Solutions</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="day-13-code"><a class="header" href="#day-13-code">Day 13: Code</a></h1>
+<p>Below is the complete code for Day 13's solution, which parses and compares nested lists according to specific rules.</p>
+<h2 id="full-solution"><a class="header" href="#full-solution">Full Solution</a></h2>
+<pre><code class="language-rust no_run noplayground">use std::cmp::Ordering;
+use std::fmt::{Debug, Formatter};
+use std::iter::Peekable;
+use std::str::FromStr;
+use crate::ListItem::{L, N};
+
+fn packets_in_right_order(input: &amp;str) -&gt; usize {
+    input.split("\n\n")
+        .map(|x| x.lines().collect::&lt;Vec&lt;_&gt;&gt;() )
+        .map(|d|
+            (ListItem::from_str(d[0]), ListItem::from_str(d[1]))
+        )
+        .enumerate()
+        .filter_map(|(i,(l,r))|
+            if l.lt(&amp;r) { Some(i+1) } else { None }
+        )
+        .sum()
+}
+
+fn get_decoder_key(input: &amp;str) -&gt; usize {
+
+    let dividers = vec![
+        L(vec![L(vec![N(2)])]),
+        L(vec![L(vec![N(6)])])
+    ];
+
+    let mut order = input.split("\n\n")
+        .flat_map(|x| x.lines() )
+        .filter_map(|d|
+            ListItem::from_str(d).ok()
+        )
+        .chain(vec![ L(vec![L(vec![N(2)])]), L(vec![L(vec![N(6)])]) ] )
+        .fold(vec![], |mut out, item|{
+            out.push(item);
+            out
+        });
+
+    order.sort();
+    order.iter().for_each(|d| println!("{:?}",d));
+
+    dividers.iter()
+        .map(|d| order.binary_search(d).unwrap() + 1 )
+        .product()
+}
+
+fn main() {
+    // let mut input = "[1,1,3,1,1]\n[1,1,5,1,1]\n\n[[1],[2,3,4]]\n[[1],4]\n\n[9]\n[[8,7,6]]\n\n[[4,4],4,4]\n[[4,4],4,4,4]\n\n\
+    // [7,7,7,7]\n[7,7,7]\n\n[]\n[3]\n\n[[[]]]\n[[]]\n\n[1,[2,[3,[4,[5,6,7]]]],8,9]\n[1,[2,[3,[4,[5,6,0]]]],8,9]".to_string();
+
+    let input = std::fs::read_to_string("src/bin/day13_input.txt").expect("Ops!");
+
+    let res = packets_in_right_order(input.as_str());
+    println!("Correctly ordered packets = {:?}",res);
+    let res = get_decoder_key(input.as_str());
+    println!("Decoder Key = {:?}",res);
+
+}
+
+enum ListItem {
+    N(u8),
+    L(Vec&lt;ListItem&gt;)
+}
+impl ListItem {
+    fn insert(&amp;mut self, item:ListItem) {
+        match (self,item) {
+            (L(list), item) =&gt; list.push(item),
+            (N(old), N(new)) =&gt; *old = new,
+            (_,_) =&gt; unreachable!()
+        }
+    }
+}
+
+impl FromStr for ListItem {
+    type Err = ();
+
+    fn from_str(inp: &amp;str) -&gt; Result&lt;Self, Self::Err&gt; {
+
+        struct Scanner&lt;I: Iterator&lt;Item=char&gt;&gt; {
+            i: Peekable&lt;I&gt;,
+        }
+        impl&lt;I: Iterator&lt;Item=char&gt;&gt; Scanner&lt;I&gt; {
+            fn new(s: I) -&gt; Self {
+                Scanner { i: s.peekable() }
+            }
+            fn parse_list(&amp;mut self) -&gt; ListItem {
+                let mut s = String::new();
+                let mut v = L(vec![]);
+                loop {
+                    match &amp;self.i.peek() {
+                        Some('[') =&gt; {
+                            self.i.next();
+                            v.insert(self.parse_list());
+                        },
+                        Some(&amp;c@ '0'..='9') =&gt; s.push(c),
+                        &amp;c@
+                        (Some(',') | Some(']')) if !s.is_empty() =&gt; {
+                            v.insert(N(u8::from_str(s.as_str()).expect("")));
+                            s.clear();
+                            if ']'.eq(c.unwrap()) {
+                                break v
+                            }
+                        },
+                        Some(',') =&gt; {}
+                        Some(']') =&gt; break v,
+                        None =&gt; break v,
+                        _ =&gt; unreachable!()
+                    }
+                    self.i.next();
+                }
+            }
+        }
+        let mut i = inp.chars().peekable();
+        i.next();
+        Ok(Scanner::new(i).parse_list())
+    }
+}
+
+impl PartialEq&lt;Self&gt; for ListItem {
+    fn eq(&amp;self, other: &amp;Self) -&gt; bool {
+        self.partial_cmp(other) == Some(Ordering::Equal)
+    }
+}
+
+impl Eq for ListItem {}
+
+impl Ord for ListItem {
+    fn cmp(&amp;self, other: &amp;Self) -&gt; Ordering {
+        match (self,other) {
+            (L(l), L(r)) =&gt; {
+                let mut liter = l.iter();
+                let mut riter = r.iter();
+
+                loop {
+                    match (liter.next(),riter.next()) {
+                        (Some(l), Some(r)) =&gt;
+                            match l.cmp(r) {
+                                Ordering::Equal =&gt; {}
+                                ord@
+                                (Ordering::Less | Ordering::Greater) =&gt; break ord,
+                            },
+                        (Some(_), None) =&gt; break Ordering::Greater,
+                        (None, Some(_)) =&gt; break Ordering::Less,
+                        (None,None) =&gt; break Ordering::Equal,
+                    };
+                }
+            }
+            (L(_), N(r)) =&gt; {
+                let right = L(vec![N(*r)]);
+                self.cmp(&amp;right)
+            }
+            (N(l), L(_)) =&gt; {
+                let left = L(vec![N(*l)]);
+                left.cmp(other)
+            }
+            (N(l), N(r)) =&gt; l.cmp(r),
+        }
+
+    }
+}
+
+impl PartialOrd for ListItem {
+    fn partial_cmp(&amp;self, other: &amp;Self) -&gt; Option&lt;Ordering&gt; {
+        Some(self.cmp(other))
+    }
+}
+
+impl Debug for ListItem {
+    fn fmt(&amp;self, f: &amp;mut Formatter&lt;'_&gt;) -&gt; std::fmt::Result {
+        match self {
+            N(n) =&gt; write!(f,"{n}")?,
+            L(v) =&gt; f.debug_list().entries(v.iter()).finish()?
+        };
+        Ok(())
+    }
+}</code></pre>
+<h2 id="code-walkthrough"><a class="header" href="#code-walkthrough">Code Walkthrough</a></h2>
+<h3 id="data-structure-for-packets"><a class="header" href="#data-structure-for-packets">Data Structure for Packets</a></h3>
+<pre><code class="language-rust no_run noplayground">enum ListItem {
+    N(u8),
+    L(Vec&lt;ListItem&gt;)
+}</code></pre>
+<p>The solution uses an enum <code>ListItem</code> to represent the nested list structure of packets:</p>
+<ul>
+<li><code>N(u8)</code> represents a number (limited to u8 for this problem)</li>
+<li><code>L(Vec&lt;ListItem&gt;)</code> represents a list containing other items (which can be numbers or lists)</li>
+</ul>
+<p>This recursive structure can represent any valid packet in the problem.</p>
+<h3 id="parsing-packets"><a class="header" href="#parsing-packets">Parsing Packets</a></h3>
+<pre><code class="language-rust no_run noplayground">impl FromStr for ListItem {
+    type Err = ();
+
+    fn from_str(inp: &amp;str) -&gt; Result&lt;Self, Self::Err&gt; {
+
+        struct Scanner&lt;I: Iterator&lt;Item=char&gt;&gt; {
+            i: Peekable&lt;I&gt;,
+        }
+        impl&lt;I: Iterator&lt;Item=char&gt;&gt; Scanner&lt;I&gt; {
+            fn new(s: I) -&gt; Self {
+                Scanner { i: s.peekable() }
+            }
+            fn parse_list(&amp;mut self) -&gt; ListItem {
+                let mut s = String::new();
+                let mut v = L(vec![]);
+                loop {
+                    match &amp;self.i.peek() {
+                        Some('[') =&gt; {
+                            self.i.next();
+                            v.insert(self.parse_list());
+                        },
+                        Some(&amp;c@ '0'..='9') =&gt; s.push(c),
+                        &amp;c@
+                        (Some(',') | Some(']')) if !s.is_empty() =&gt; {
+                            v.insert(N(u8::from_str(s.as_str()).expect("")));
+                            s.clear();
+                            if ']'.eq(c.unwrap()) {
+                                break v
+                            }
+                        },
+                        Some(',') =&gt; {}
+                        Some(']') =&gt; break v,
+                        None =&gt; break v,
+                        _ =&gt; unreachable!()
+                    }
+                    self.i.next();
+                }
+            }
+        }
+        let mut i = inp.chars().peekable();
+        i.next();
+        Ok(Scanner::new(i).parse_list())
+    }
+}
+</code></pre>
+<p>The <code>FromStr</code> implementation uses a custom scanner to parse the input string into a <code>ListItem</code>:</p>
+<ol>
+<li>It creates a <code>Scanner</code> with a peekable iterator over the input characters</li>
+<li>The <code>parse_list</code> method recursively builds the list structure by:
+<ul>
+<li>Creating a new list when encountering <code>[</code></li>
+<li>Accumulating digits for numbers</li>
+<li>Inserting numbers when reaching a comma or closing bracket</li>
+<li>Breaking when reaching the end of the list</li>
+</ul>
+</li>
+<li>The method returns the parsed <code>ListItem</code></li>
+</ol>
+<h3 id="item-insertion-helper"><a class="header" href="#item-insertion-helper">Item Insertion Helper</a></h3>
+<pre><code class="language-rust no_run noplayground">impl ListItem {
+    fn insert(&amp;mut self, item:ListItem) {
+        match (self,item) {
+            (L(list), item) =&gt; list.push(item),
+            (N(old), N(new)) =&gt; *old = new,
+            (_,_) =&gt; unreachable!()
+        }
+    }
+}
+</code></pre>
+<p>This helper method adds an item to a list or updates a number.</p>
+<h3 id="comparison-logic"><a class="header" href="#comparison-logic">Comparison Logic</a></h3>
+<pre><code class="language-rust no_run noplayground">impl Ord for ListItem {
+    fn cmp(&amp;self, other: &amp;Self) -&gt; Ordering {
+        match (self,other) {
+            (L(l), L(r)) =&gt; {
+                let mut liter = l.iter();
+                let mut riter = r.iter();
+
+                loop {
+                    match (liter.next(),riter.next()) {
+                        (Some(l), Some(r)) =&gt;
+                            match l.cmp(r) {
+                                Ordering::Equal =&gt; {}
+                                ord@
+                                (Ordering::Less | Ordering::Greater) =&gt; break ord,
+                            },
+                        (Some(_), None) =&gt; break Ordering::Greater,
+                        (None, Some(_)) =&gt; break Ordering::Less,
+                        (None,None) =&gt; break Ordering::Equal,
+                    };
+                }
+            }
+            (L(_), N(r)) =&gt; {
+                let right = L(vec![N(*r)]);
+                self.cmp(&amp;right)
+            }
+            (N(l), L(_)) =&gt; {
+                let left = L(vec![N(*l)]);
+                left.cmp(other)
+            }
+            (N(l), N(r)) =&gt; l.cmp(r),
+        }
+
+    }
+}</code></pre>
+<p>The <code>Ord</code> implementation defines how to compare two <code>ListItem</code> values:</p>
+<ol>
+<li><strong>List vs. List</strong>: Compare elements one by one until finding a difference or reaching the end of a list</li>
+<li><strong>List vs. Number</strong>: Convert the number to a single-item list and retry comparison</li>
+<li><strong>Number vs. List</strong>: Convert the number to a single-item list and retry comparison</li>
+<li><strong>Number vs. Number</strong>: Use the built-in number comparison</li>
+</ol>
+<p>This implements the comparison rules specified in the problem.</p>
+<h3 id="additional-trait-implementations"><a class="header" href="#additional-trait-implementations">Additional Trait Implementations</a></h3>
+<pre><code class="language-rust no_run noplayground">impl PartialEq&lt;Self&gt; for ListItem {
+    fn eq(&amp;self, other: &amp;Self) -&gt; bool {
+        self.partial_cmp(other) == Some(Ordering::Equal)
+    }
+}
+
+impl Eq for ListItem {}</code></pre>
+<pre><code class="language-rust no_run noplayground">impl PartialOrd for ListItem {
+    fn partial_cmp(&amp;self, other: &amp;Self) -&gt; Option&lt;Ordering&gt; {
+        Some(self.cmp(other))
+    }
+}</code></pre>
+<p>These implementations ensure that <code>ListItem</code> supports all the comparison operators and can be used in sorting operations.</p>
+<h3 id="debug-display"><a class="header" href="#debug-display">Debug Display</a></h3>
+<pre><code class="language-rust no_run noplayground">impl Debug for ListItem {
+    fn fmt(&amp;self, f: &amp;mut Formatter&lt;'_&gt;) -&gt; std::fmt::Result {
+        match self {
+            N(n) =&gt; write!(f,"{n}")?,
+            L(v) =&gt; f.debug_list().entries(v.iter()).finish()?
+        };
+        Ok(())
+    }
+}</code></pre>
+<p>This implementation formats <code>ListItem</code> values for debugging, using Rust's <code>debug_list</code> for nice formatting of lists.</p>
+<h3 id="part-1-finding-correctly-ordered-pairs"><a class="header" href="#part-1-finding-correctly-ordered-pairs">Part 1: Finding Correctly Ordered Pairs</a></h3>
+<pre><code class="language-rust no_run noplayground">fn packets_in_right_order(input: &amp;str) -&gt; usize {
+    input.split("\n\n")
+        .map(|x| x.lines().collect::&lt;Vec&lt;_&gt;&gt;() )
+        .map(|d|
+            (ListItem::from_str(d[0]), ListItem::from_str(d[1]))
+        )
+        .enumerate()
+        .filter_map(|(i,(l,r))|
+            if l.lt(&amp;r) { Some(i+1) } else { None }
+        )
+        .sum()
+}</code></pre>
+<p>This function processes the input for Part 1:</p>
+<ol>
+<li>Splits the input by double newlines to get pairs of packets</li>
+<li>Parses each packet into a <code>ListItem</code></li>
+<li>Uses the <code>lt</code> comparison to check if pairs are in the right order</li>
+<li>Keeps 1-based indices of correctly ordered pairs</li>
+<li>Sums these indices</li>
+</ol>
+<h3 id="part-2-sorting-and-finding-divider-packets"><a class="header" href="#part-2-sorting-and-finding-divider-packets">Part 2: Sorting and Finding Divider Packets</a></h3>
+<pre><code class="language-rust no_run noplayground">fn get_decoder_key(input: &amp;str) -&gt; usize {
+
+    let dividers = vec![
+        L(vec![L(vec![N(2)])]),
+        L(vec![L(vec![N(6)])])
+    ];
+
+    let mut order = input.split("\n\n")
+        .flat_map(|x| x.lines() )
+        .filter_map(|d|
+            ListItem::from_str(d).ok()
+        )
+        .chain(vec![ L(vec![L(vec![N(2)])]), L(vec![L(vec![N(6)])]) ] )
+        .fold(vec![], |mut out, item|{
+            out.push(item);
+            out
+        });
+
+    order.sort();
+    order.iter().for_each(|d| println!("{:?}",d));
+
+    dividers.iter()
+        .map(|d| order.binary_search(d).unwrap() + 1 )
+        .product()
+}</code></pre>
+<p>This function processes the input for Part 2:</p>
+<ol>
+<li>Defines the two divider packets (<code>[[2]]</code> and <code>[[6]]</code>)</li>
+<li>Parses all packets from the input and adds the divider packets</li>
+<li>Sorts all packets using the comparison logic</li>
+<li>Finds the 1-based indices of the divider packets</li>
+<li>Multiplies these indices to get the decoder key</li>
+</ol>
+<h3 id="main-function"><a class="header" href="#main-function">Main Function</a></h3>
+<pre><code class="language-rust no_run noplayground">fn main() {
+    // let mut input = "[1,1,3,1,1]\n[1,1,5,1,1]\n\n[[1],[2,3,4]]\n[[1],4]\n\n[9]\n[[8,7,6]]\n\n[[4,4],4,4]\n[[4,4],4,4,4]\n\n\
+    // [7,7,7,7]\n[7,7,7]\n\n[]\n[3]\n\n[[[]]]\n[[]]\n\n[1,[2,[3,[4,[5,6,7]]]],8,9]\n[1,[2,[3,[4,[5,6,0]]]],8,9]".to_string();
+
+    let input = std::fs::read_to_string("src/bin/day13_input.txt").expect("Ops!");
+
+    let res = packets_in_right_order(input.as_str());
+    println!("Correctly ordered packets = {:?}",res);
+    let res = get_decoder_key(input.as_str());
+    println!("Decoder Key = {:?}",res);
+
+}</code></pre>
+<p>The main function reads the input file and runs both parts of the problem.</p>
+<h2 id="implementation-notes"><a class="header" href="#implementation-notes">Implementation Notes</a></h2>
+<ul>
+<li><strong>Recursive Data Structure</strong>: The solution uses a recursive enum to represent the nested packet structure</li>
+<li><strong>Custom Parser</strong>: The parser handles the specific format of the input without relying on external libraries</li>
+<li><strong>Trait Implementations</strong>: The comparison logic is cleanly implemented using Rust's trait system</li>
+<li><strong>Functional Style</strong>: The solution uses a functional programming style with iterators and method chaining</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../day13/solution.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../day14/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../day13/solution.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../day14/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
