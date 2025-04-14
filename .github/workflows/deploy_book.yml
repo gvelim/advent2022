@@ -1,8 +1,6 @@
 name: Book Deploy
 on:
   workflow_dispatch:
-    paths:
-      - 'docs/**'
   push:
     branches:
       - master
